@@ -51,7 +51,7 @@ main{max-width:1080px;margin:0 auto;padding:24px 16px 72px}
 .fine{margin:20px 0 0;color:var(--on-surface-var);font-size:14px}
 .playground{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
 .topics{display:flex;flex-direction:column;gap:8px}
-.topics button{display:flex;align-items:center;gap:8px;height:40px;padding:0 16px 0 12px;border-radius:20px;border:1px solid var(--outline-var);background:none;color:var(--on-surface-var);font:700 14px inherit;font-family:inherit;cursor:pointer;text-align:left;transition:background .15s}
+.topics button{display:flex;align-items:center;gap:8px;height:40px;padding:0 16px 0 12px;border-radius:20px;border:1px solid var(--outline-var);background:none;color:var(--on-surface-var);font-weight:700;font-size:14px;font-family:inherit;font-family:inherit;cursor:pointer;text-align:left;transition:background .15s}
 .topics button .ms{font-size:18px}
 .topics button:hover{background:var(--surface-c-high)}
 .topics button[aria-selected="true"]{background:var(--secondary-container);color:var(--on-secondary-container);border-color:transparent}
