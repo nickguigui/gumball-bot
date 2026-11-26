@@ -83,8 +83,14 @@ fetch('commands.json').then(r => r.json()).then(data => {
 let API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8787' : '';
 async function apiBase(force) {
   if (API && !force) return API;
-  const r = await fetch(`https://api.github.com/repos/${REPO}/contents/endpoint.json?ref=main`, { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }).catch(() => null);
-  const j = r?.ok ? await r.json().catch(() => null) : null;
+  // raw.githubusercontent nao tem limite por IP (a API do GitHub tem 60/hora, pouco para quem usa 4G); a API fica de reserva
+  const tries = [`https://raw.githubusercontent.com/${REPO}/main/endpoint.json?t=${Date.now()}`, `https://api.github.com/repos/${REPO}/contents/endpoint.json?ref=main`];
+  let j = null;
+  for (const u of tries) {
+    const r = await fetch(u, { headers: u.includes('api.github') ? { Accept: 'application/vnd.github.raw+json' } : {}, cache: 'no-store' }).catch(() => null);
+    j = r?.ok ? await r.json().catch(() => null) : null;
+    if (j?.url) break;
+  }
   if (!j?.url) throw new Error(j?.trocando ? 'O servidor está trocando de turno. Tente de novo em 2 minutos.' : 'O servidor está fora do ar agora. Tente de novo em alguns minutos.');
   return (API = j.url);
 }
