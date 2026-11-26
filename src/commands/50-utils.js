@@ -197,35 +197,18 @@ export const commands = [
   {
     name: 'celular', category: CAT, react: '🔍', done: '📱', run: async ctx => {
       if (!ctx.q) return ctx.reply('📱 *Uso:* /celular <modelo>  Ex.: _/celular Galaxy S24_');
-      const base = 'https://www.gsmarena.com/';
-      const $s = cheerio.load(await getText(`${base}results.php3?sQuickSearch=yes&sName=${encodeURIComponent(ctx.q)}`));
-      const links = $s('.makers a').map((i, a) => ({ href: $s(a).attr('href'), name: $s(a).text().replace(/\s+/g, ' ').trim() })).get();
-      const best = links.find(l => normalize(l.name) === normalize(ctx.q)) || links.sort((a, b) => a.name.length - b.name.length).find(l => normalize(l.name).includes(normalize(ctx.q))) || links[0];
-      if (!best) return ctx.reply('❌ Modelo não encontrado.');
-      const $ = cheerio.load(await getText(base + best.href));
-      const spec = k => $(`[data-spec="${k}"]`).first().text().trim();
-      const cap = `📱 *${$('.specs-phone-name-title').text().trim()}*
-
-        🧠 *Processamento*
-        • Chipset: ${spec('chipset') || '?'}
-        • Memória: ${spec('internalmemory') || '?'}
-        • Sistema: ${spec('os') || '?'}
-
-        🖥️ *Tela*
-        • ${spec('displaysize') || '?'} ${spec('displayresolution') ? `(${spec('displayresolution').split(',')[0]})` : ''}
-
-        📸 *Câmera*
-        • ${(spec('cam1modules') || '?').split('\n')[0]}
-
-        🔋 *Bateria*
-        • ${spec('batdescription1') || '?'}
-
-        💰 *Preço estimado*
-        • ${spec('price') || 'Não informado'}
-
-        ✅ Especificações consultadas com sucesso.`;
-      const img = $('.specs-photo-main img').attr('src');
-      return img ? ctx.send({ image: { url: img }, caption: cap }, { quoted: ctx.m }) : ctx.reply(cap);
+      // Fonte aberta: Wikipedia (pt, depois en). Sites de especificacoes bloqueiam robos.
+      for (const lang of ['pt', 'en']) {
+        const s = await getJson(`https://${lang}.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(ctx.q + ' smartphone')}&limit=3`).catch(() => null);
+        const page = s?.pages?.find(p => normalize(p.title).includes(normalize(ctx.q).split(' ')[0])) || s?.pages?.[0];
+        if (!page) continue;
+        const sum = await getJson(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(page.key)}`).catch(() => null);
+        if (!sum?.extract) continue;
+        const cap = `📱 *${sum.title}*\n\n        📝 *Resumo*\n        ${sum.extract.slice(0, 700)}\n\n        🔗 ${sum.content_urls?.desktop?.page || ''}\n\n        ✅ Informações consultadas com sucesso.`;
+        const img = sum.originalimage?.source || sum.thumbnail?.source;
+        return img ? ctx.send({ image: { url: img }, caption: cap }, { quoted: ctx.m }) : ctx.reply(cap);
+      }
+      return ctx.reply('❌ Modelo não encontrado.');
     },
   },
   {
