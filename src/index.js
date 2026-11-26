@@ -69,6 +69,13 @@ async function connect() {
     }
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode;
+      // Codigo de pareamento expirou sem ser digitado: o WhatsApp fecha com 401. Recomeca do zero e gera outro.
+      if (code === DisconnectReason.loggedOut && config.pairNumber && !sock.authState.creds.registered) {
+        fs.rmSync(config.authDir, { recursive: true, force: true });
+        tell({ type: 'pair-renew' });
+        setTimeout(connect, 1500);
+        return;
+      }
       if (code === DisconnectReason.loggedOut) {
         console.error('❌ Sessão encerrada no celular.');
         tell({ type: 'logged-out' });
