@@ -116,7 +116,7 @@ $('#cx-form').addEventListener('submit', async e => {
   try {
     const r = await api('/api/entrar', { method: 'POST', body: { telefone: e.target.telefone.value } });
     ticket = r.ticket; $$('.cx-num').forEach(el => { el.textContent = r.numero; });
-    if (r.passo === 'parear') { $('#cx-code').textContent = r.codigo; view('cx-parear'); pollPair(); }
+    if (r.passo === 'parear') { $('#cx-code').textContent = r.codigo || 'gerando...'; view('cx-parear'); pollPair(); }
     else { view('cx-entrar'); $('#cx-login').codigo.focus(); }
   } catch (err) { showErr('#cx-erro', err.message); } finally { btn.disabled = false; }
 });

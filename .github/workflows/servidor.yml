@@ -45,6 +45,7 @@ jobs:
           DATA_ROOT: ./data/tenants
           PORT: '8787'
           ALLOWED_ORIGINS: https://nickguigui.github.io
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
           BOT_NAME: ${{ vars.BOT_NAME || 'GUMBALL' }}
           OWNER_NAME: ${{ vars.OWNER_NAME || 'Nick' }}
           BLOCKED_COMMANDS: ${{ vars.BLOCKED_COMMANDS || 'face' }}

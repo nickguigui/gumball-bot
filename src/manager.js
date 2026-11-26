@@ -54,8 +54,14 @@ function start(phone, { pairing = false } = {}) {
   const child = fork(BOT, [], { env, cwd: path.dirname(path.dirname(BOT)), stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
   const p = { child, state: pairing ? 'pairing' : 'starting', code: null, codeAt: 0, waiters: [], startedAt: Date.now() };
   procs.set(phone, p);
-  child.stderr.on('data', b => { const s = b.toString().trim(); if (s && !/ExperimentalWarning/.test(s)) console.warn(`[${mask(phone)}] ${s.slice(0, 300)}`); });
+  p.log = [];
+  child.stderr.on('data', b => {
+    const s = b.toString().trim(); if (!s || /ExperimentalWarning/.test(s)) return;
+    console.warn(`[${mask(phone)}] ${s.slice(0, 300)}`);
+    p.log.push(`${new Date().toISOString().slice(11, 19)} ${s.slice(0, 500)}`); if (p.log.length > 60) p.log.shift();
+  });
   child.on('message', msg => {
+    p.log?.push(`${new Date().toISOString().slice(11, 19)} [ipc] ${msg.type}${msg.error ? ': ' + msg.error : ''}`);
     if (msg.type === 'pair') { p.state = 'pairing'; p.code = msg.code; p.codeAt = Date.now(); }
     if (msg.type === 'pair-error') { p.state = 'error'; p.error = msg.error; }
     if (msg.type === 'connected') {
@@ -103,6 +109,13 @@ function auth(req) {
 const ip = req => (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
 const routes = {
+  // Diagnostico (so com a chave ADMIN_KEY do servidor): estado e log de um numero
+  'GET /api/diag': async (req, url) => {
+    const k = url.searchParams.get('k') || '';
+    if (!process.env.ADMIN_KEY || k.length !== process.env.ADMIN_KEY.length || !crypto.timingSafeEqual(Buffer.from(k), Buffer.from(process.env.ADMIN_KEY))) return [404, { erro: 'Não encontrado' }];
+    const phone = normPhone(url.searchParams.get('tel')); const p = phone && procs.get(phone);
+    return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null }];
+  },
   'GET /api/saude': async () => [200, { ok: true, numeros: Object.keys(reg.tenants).length, online: [...procs.values()].filter(p => p.state === 'connected').length }],
 
   // 1) Entrar: numero nao conectado -> codigo de 8 letras; conectado -> codigo de entrada na conversa "Voce"
@@ -113,17 +126,17 @@ const routes = {
     const ticket = crypto.randomBytes(16).toString('hex'); tickets.set(ticket, { phone, until: Date.now() + 15 * 60_000 });
     if (isRegistered(phone)) {
       const p = start(phone); if (p.state !== 'connected') await waitFor(p, ['connected'], 30_000);
-      if (p.state !== 'connected') return [503, { erro: 'O bot desse número está reconectando. Tente em 1 minuto.' }];
+      if (p.state !== 'connected') return [409, { erro: 'O bot desse número está reconectando. Tente em 1 minuto.' }];
       const code = String(crypto.randomInt(100000, 999999)); logins.set(phone, { code, until: Date.now() + 10 * 60_000, tries: 0 });
       p.child.send({ type: 'login-code', code });
       return [200, { passo: 'entrar', ticket, numero: mask(phone) }];
     }
-    if (Object.keys(reg.tenants).length >= MAX_TENANTS) return [503, { erro: 'O servidor está lotado agora. Tente mais tarde.' }];
+    if (Object.keys(reg.tenants).length >= MAX_TENANTS) return [429, { erro: 'O servidor está lotado agora. Tente mais tarde.' }];
     const p = start(phone, { pairing: true });
-    if (!(p.code && Date.now() - p.codeAt < 90_000)) await waitFor(p, ['pair', 'pair-error'], 45_000);
-    if (p.state === 'error') return [502, { erro: 'O WhatsApp recusou o pedido de código. Confira o número.' }];
-    if (!p.code) return [504, { erro: 'O WhatsApp demorou para responder. Tente de novo.' }];
-    return [200, { passo: 'parear', ticket, codigo: p.code, numero: mask(phone) }];
+    // responde rapido; o site pergunta em /api/pareamento ate o codigo ficar pronto
+    if (!(p.code && Date.now() - p.codeAt < 90_000)) await waitFor(p, ['pair', 'pair-error'], 8_000);
+    if (p.state === 'error') return [422, { erro: 'O WhatsApp recusou o pedido de código. Confira o número.' }];
+    return [200, { passo: 'parear', ticket, codigo: p.code || null, numero: mask(phone) }];
   },
 
   // 2) Acompanhar o pareamento (o site pergunta a cada poucos segundos)
