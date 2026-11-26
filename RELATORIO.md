@@ -32,3 +32,15 @@ Tudo abaixo está publicado em https://github.com/nickguigui/gumball-bot e no si
 
 ## Como o servidor funciona (sem cartão, sem PC)
 GitHub Actions (`servidor.yml`) roda ~5h40, salva os dados criptografados a cada 5 min e liga o próximo turno; o site acha o endereço do túnel em `endpoint.json`. Na troca de turno o bot fica 1–2 min fora.
+
+---
+
+# Atualização (26/11, tarde)
+
+- **Chaves cadastradas** como Secrets do GitHub (fora do código): TMDB ✅, football-data ✅, GNews ✅, OpenAI ⚠️ (válida, mas **sem crédito**: o /gpt tenta ela e cai na IA grátis; colocando crédito, passa a usar a OpenAI sozinho).
+- **/filme e /cinema** com TMDB (pôster, nota, filmes em cartaz). **/futebol** com football-data (`/futebol brasileirao`, `champions`, `premier`...; reserva: ESPN). **/noticias** com GNews e busca por assunto (`/noticias Laufey`; reservas: Google Notícias e G1).
+- **/emojimix** agora funciona **sem chave** (Emoji Kitchen direto do Google).
+- **/placa e /placaloli** iguais ao script `Atualizar_Placaloli.sh` antigo (a imagem da placa).
+- Erros de serviço externo viram aviso amigável ("o serviço está ocupado, tente de novo").
+- **Testado ao vivo no seu número**: /filme, /cinema, /gpt, /placaloli, /futebol brasileirao, /noticias Laufey, /emojimix, /wiki. Bateria automática: 316 comandos, 0 crash.
+- **Backup**: `E:\backups\gumball-bot_2026-11-26_1249.zip` (cópia em `D:\backups`), com o projeto, a engenharia reversa, a memória e as chaves de acesso locais.
