@@ -1,5 +1,6 @@
 // Figurinhas e edicao de fotos (sharp + ffmpeg, tudo local).
 import sharp from 'sharp';
+import { fileURLToPath } from 'node:url';
 import { imageToSticker, videoToSticker, addExif, readExif, stickerToImage, stickerToMp4, textSvg, svgToWebp, svgToPng, framesToAnimatedWebp, esc, wrap, toOggOpus, isAnimatedWebp, muxAudio } from '../lib/media.js';
 import { attachSound, stickerSound } from '../lib/soundsticker.js';
 import { getBuffer, getJson, http, UserError } from '../lib/http.js';
@@ -200,11 +201,26 @@ ${lines.map((l, i) => `<text x="120" y="${256 - h / 2 + 74 + i * 34}" font-famil
     },
   },
   {
-    name: 'placa', category: PH, react: '🪧', done: '✅', run: async ctx => {
-      if (!ctx.q) return ctx.reply('🪧 *Uso:* /placa seu texto');
-      const lines = wrap(ctx.q.slice(0, 90), 14).slice(0, 5);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="#87ceeb"/><rect x="246" y="300" width="20" height="212" fill="#7a4a1f"/><rect x="56" y="70" width="400" height="250" rx="16" fill="#fff8e1" stroke="#5d4037" stroke-width="10"/>${lines.map((l, i) => `<text x="256" y="${195 - (lines.length - 1) * 21 + i * 44}" font-family="Comic Sans MS, Arial" font-weight="700" font-size="38" fill="#3e2723" text-anchor="middle">${esc(l)}</text>`).join('')}</svg>`;
-      return ctx.image(await sharp(Buffer.from(svg)).jpeg().toBuffer(), '🪧 *Sua placa está pronta!*');
+    // Igual ao Atualizar_Placaloli.sh do Gumball antigo: a personagem segurando a placa, texto girado 10° em cima dela
+    name: 'placa', aliases: ['placaloli'], category: PH, react: '🪧', done: '✅', run: async ctx => {
+      const text = (ctx.q || ctx.quoted?.text || '').trim();
+      if (!text) return ctx.reply(`🪧 *Uso:* /${ctx.cmd} texto da placa`);
+      if ([...text].length > 180) return ctx.reply('🪧 Use até 180 caracteres na placa.');
+      const lines = [];
+      for (const paragraph of text.split(/\r?\n/)) {
+        let line = '';
+        for (const word of paragraph.split(/\s+/).filter(Boolean)) for (const chunk of word.match(/.{1,22}/gu) || []) {
+          if ([...`${line} ${chunk}`.trim()].length > 22) { lines.push(line); line = ''; }
+          line = `${line} ${chunk}`.trim();
+        }
+        lines.push(line);
+      }
+      if (lines.length > 9) return ctx.reply('🪧 Use no máximo 9 linhas na placa.');
+      const size = Math.min(64, Math.floor(510 / lines.length)), step = Math.round(size * 1.18), y = 960 - (lines.length - 1) * step / 2 - size * 0.9; // o renderizador ignora o centro vertical
+      const overlay = `<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1423"><g transform="rotate(10 680 960)"><text x="680" y="${y}" text-anchor="middle" dominant-baseline="central" font-family="DejaVu Sans, Arial, sans-serif" font-size="${size}" font-weight="bold" fill="#202020">${lines.map((l, i) => `<tspan x="680" dy="${i ? step : 0}">${esc(l)}</tspan>`).join('')}</text></g></svg>`;
+      const base = fileURLToPath(new URL('../../assets/placa.jpg', import.meta.url));
+      const img = await sharp(base).resize(1536, 1423, { fit: 'fill' }).composite([{ input: Buffer.from(overlay) }]).jpeg({ quality: 90 }).toBuffer();
+      return ctx.image(img, '');
     },
   },
   {
