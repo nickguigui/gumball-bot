@@ -79,11 +79,23 @@ fetch('commands.json').then(r => r.json()).then(data => {
 }).catch(() => {});
 
 // ---------- conectar + painel (igual ZueiraBot: sem GitHub, sem conta) ----------
-const API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8787' : 'https://bot.nickguigui.qzz.io';
+// O servidor roda num tunel cujo endereco muda a cada turno: ele publica o atual em endpoint.json
+let API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8787' : '';
+async function apiBase(force) {
+  if (API && !force) return API;
+  const r = await fetch(`https://api.github.com/repos/${REPO}/contents/endpoint.json?ref=main`, { headers: { Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }).catch(() => null);
+  const j = r?.ok ? await r.json().catch(() => null) : null;
+  if (!j?.url) throw new Error(j?.trocando ? 'O servidor está trocando de turno. Tente de novo em 2 minutos.' : 'O servidor está fora do ar agora. Tente de novo em alguns minutos.');
+  return (API = j.url);
+}
 let session = store.get('gb-sessao') || '';
 async function api(path, opts = {}) {
-  const r = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session}` } : {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined })
-    .catch(() => { throw new Error('Não consegui falar com o servidor. Confira sua internet e tente de novo.'); });
+  let base = await apiBase();
+  // se o endereco antigo parou de responder, busca o novo uma vez
+  const go = b => fetch(b + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session}` } : {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  let r = await go(base).catch(() => null);
+  if (!r || r.status === 530 || r.status === 502) { base = await apiBase(true); r = await go(base).catch(() => null); }
+  if (!r) throw new Error('Não consegui falar com o servidor. Confira sua internet e tente de novo.');
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && path === '/api/painel') { session = ''; store.set('gb-sessao', ''); }
   if (!r.ok) throw new Error(j.erro || `Erro ${r.status}`);

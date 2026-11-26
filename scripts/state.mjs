@@ -6,9 +6,11 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 
-const DIRS = [process.env.AUTH_DIR || './auth', process.env.DATA_DIR || './data'];
+// STATE_DIRS=./data (servidor: todos os numeros + registry.json) ou o padrao do bot de um numero
+const DIRS = process.env.STATE_DIRS ? process.env.STATE_DIRS.split(',') : [process.env.AUTH_DIR || './auth', process.env.DATA_DIR || './data'];
 const OUT = process.env.STATE_FILE || './state/state.enc';
-const SKIP = /\.(png|db-shm|db-wal)$|^qr\./;
+// o -wal guarda as gravacoes recentes do SQLite: vai junto (o -shm e recriado sozinho)
+const SKIP = /\.(png|db-shm)$|^qr\./;
 
 function key() {
   const k = process.env.STATE_KEY || '';

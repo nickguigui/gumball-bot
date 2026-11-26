@@ -1,0 +1,96 @@
+name: Gumball Servidor
+
+# Servidor de TODOS os numeros (quem conecta pelo site). Roda ~5h40, salva os dados
+# criptografados em state/servidor.enc a cada 5 min e dispara a proxima execucao.
+# O site acha o servidor pelo endereco do tunel publicado em endpoint.json.
+on:
+  schedule:
+    - cron: '23 */2 * * *' # so religa a corrente se ela cair
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: gumball-servidor
+  cancel-in-progress: false
+
+jobs:
+  servidor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Restaurar dados
+        env:
+          STATE_KEY: ${{ secrets.STATE_KEY }}
+          STATE_FILE: state/servidor.enc
+          STATE_DIRS: ./data
+        run: node scripts/state.mjs unpack
+
+      - name: Rodar o servidor
+        env:
+          STATE_KEY: ${{ secrets.STATE_KEY }}
+          STATE_FILE: state/servidor.enc
+          STATE_DIRS: ./data
+          DATA_ROOT: ./data/tenants
+          PORT: '8787'
+          ALLOWED_ORIGINS: https://nickguigui.github.io
+          BOT_NAME: ${{ vars.BOT_NAME || 'GUMBALL' }}
+          OWNER_NAME: ${{ vars.OWNER_NAME || 'Nick' }}
+          BLOCKED_COMMANDS: ${{ vars.BLOCKED_COMMANDS || 'face' }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          SPICY_LYRICS_KEY: ${{ secrets.SPICY_LYRICS_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TENOR_API_KEY: ${{ secrets.TENOR_API_KEY }}
+          REMOVEBG_API_KEY: ${{ secrets.REMOVEBG_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "gumball-servidor"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          publicar() { # $1 = arquivos, $2 = mensagem
+            git add $1; git diff --cached --quiet && return 0
+            git commit -q -m "$2"
+            for i in 1 2 3; do git pull -q --rebase -X theirs && git push -q && return 0; sleep 3; done
+            echo "⚠️ push falhou"
+          }
+          salvar() { node scripts/state.mjs pack >/dev/null && publicar state/servidor.enc "servidor: dados"; }
+
+          # ffmpeg + yt-dlp em paralelo (o servidor ja atende enquanto instala)
+          ( sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu fonts-noto-color-emoji > /dev/null
+            sudo curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp ) &
+
+          npm run server > servidor.log 2>&1 &
+          SRV=$!
+
+          # tunel gratis da Cloudflare (sem conta): da um endereco https publico para o site
+          curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared && chmod +x cloudflared
+          ./cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8787 > tunel.log 2>&1 &
+          URL=""
+          for i in $(seq 60); do URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' tunel.log | head -1); [ -n "$URL" ] && break; sleep 1; done
+          [ -z "$URL" ] && { echo "❌ túnel não subiu"; cat tunel.log; exit 1; }
+          echo "🌐 servidor em $URL"
+          printf '{"url":"%s","desde":%s}\n' "$URL" "$(date +%s000)" > endpoint.json
+          publicar endpoint.json "servidor: endereco"
+
+          fim=$(( $(date +%s) + 340*60 ))
+          while kill -0 $SRV 2>/dev/null && [ $(date +%s) -lt $fim ]; do
+            for i in $(seq 30); do kill -0 $SRV 2>/dev/null || break; sleep 10; done
+            salvar
+            grep -E "ERR|erro|Error" servidor.log | tail -3 || true
+          done
+          printf '{"url":"","desde":%s,"trocando":true}\n' "$(date +%s000)" > endpoint.json
+          publicar endpoint.json "servidor: trocando de turno"
+          kill -TERM $SRV 2>/dev/null; sleep 6
+          salvar
+          echo "🔁 Disparando o próximo turno"
+          gh workflow run servidor.yml --repo "$GITHUB_REPOSITORY" --ref main || echo "⚠️ não consegui disparar o próximo"

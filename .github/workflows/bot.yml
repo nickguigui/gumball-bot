@@ -4,12 +4,10 @@ name: Gumball Bot
 # criptografado (state/state.enc) a cada 10 min e no fim dispara a proxima.
 # O cron so religa a corrente se ela cair.
 on:
-  schedule:
-    - cron: '17 */3 * * *'
   workflow_dispatch:
     inputs:
       pair:
-        description: 'Conectar: "sim" gera o código de pareamento (usa o secret PAIR_NUMBER; o site faz isso sozinho)'
+        description: 'Conectar: "sim" gera o cÃ³digo de pareamento (usa o secret PAIR_NUMBER; o site faz isso sozinho)'
         required: false
         default: ''
 
@@ -35,7 +33,7 @@ jobs:
 
       - run: npm ci --omit=dev --no-audit --no-fund
 
-      - name: Restaurar sessão
+      - name: Restaurar sessÃ£o
         env:
           STATE_KEY: ${{ secrets.STATE_KEY }}
         run: node scripts/state.mjs unpack
@@ -67,7 +65,7 @@ jobs:
             git diff --cached --quiet && return 0
             git commit -q -m "bot: estado"
             git pull -q --rebase --autostash -X ours || true
-            git push -q || echo "⚠️ push falhou"
+            git push -q || echo "âš ï¸ push falhou"
           }
           # ffmpeg + yt-dlp instalam em paralelo (o codigo de pareamento sai antes)
           ( sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu fonts-noto-color-emoji > /dev/null
@@ -84,9 +82,9 @@ jobs:
           if ! kill -0 $BOT 2>/dev/null; then
             wait $BOT; code=$?
             salvar
-            if [ "$code" = "3" ] || [ "$code" = "1" ]; then echo "⏹️ Bot parou (código $code): não vou redisparar."; exit 0; fi
+            if [ "$code" = "3" ] || [ "$code" = "1" ]; then echo "â¹ï¸ Bot parou (cÃ³digo $code): nÃ£o vou redisparar."; exit 0; fi
           fi
           kill -TERM $BOT 2>/dev/null; sleep 5
           salvar
-          echo "🔁 Disparando a próxima execução"
-          gh workflow run bot.yml --repo "$GITHUB_REPOSITORY" --ref main || echo "⚠️ não consegui disparar a próxima"
+          echo "ðŸ” Disparando a prÃ³xima execuÃ§Ã£o"
+          gh workflow run bot.yml --repo "$GITHUB_REPOSITORY" --ref main || echo "âš ï¸ nÃ£o consegui disparar a prÃ³xima"
