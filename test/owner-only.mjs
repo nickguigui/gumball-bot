@@ -30,8 +30,14 @@ const r = [
   await msg('comando de grupo no privado', DM, true, undefined, '/ban', 'só funciona em grupo'),
   await msg('ranking local no privado', DM, true, undefined, '/rankmsg', 'só funciona em grupo'),
 ];
+// painel: "Responder no privado" desligado -> privado em silencio, grupo continua
+const { settings } = await import('../src/settings.js');
+settings.privateChats = false;
+r.push(await msg('privado com a opção desligada', DM, true, undefined, '/dados', 'silencio'));
+r.push(await msg('grupo com a opção desligada', G, true, undefined, '/dados', 'DADO LANÇADO'));
+settings.privateChats = true;
 // eco: a resposta do bot volta como mensagem "minha"; nao pode virar comando de novo
-const last = sent.at(-1);
+const last = sent.filter(s => !s.c.react).at(-1); // reacao nao tem id proprio
 const before = sent.length;
 await handleMessage(sock, { key: { remoteJid: DM, id: last.id, fromMe: true }, messageTimestamp: Math.floor(Date.now() / 1000), message: { conversation: '/dados' } });
 const echoOk = sent.length === before; console.log(`${echoOk ? '✅' : '❌'} eco da própria resposta ignorado`);

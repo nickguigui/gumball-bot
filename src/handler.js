@@ -8,6 +8,7 @@ import { config } from './config.js';
 import { db } from './db.js';
 import { middlewares, onJoin, onLeave } from './middlewares.js';
 import { numId } from './lib/text.js';
+import { settings } from './settings.js';
 
 const lastCmdAt = new Map(); // anti-spam por usuario (tempocmd)
 
@@ -18,8 +19,8 @@ export async function handleMessage(sock, m) {
   if (m.key.fromMe && !config.allowSelf) return;
 
   const ctx = buildContext(sock, m);
-  // Modo "so dono" funciona tambem no privado; senao, so grupos (como o Zenitsu)
-  if (config.groupsOnly && !config.ownerOnly && !ctx.isGroup) return;
+  // Privado: so no modo "so dono" e com a opcao "Responder no privado" ligada no painel do site
+  if (!ctx.isGroup && !(config.ownerOnly && settings.privateChats)) return;
 
   // Estatisticas e middlewares (antis, afk, mute, autosticker, respostas automaticas)
   if (ctx.isGroup) {
