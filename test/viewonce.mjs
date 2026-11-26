@@ -13,7 +13,7 @@ const reply = text => ({ extendedTextMessage: { text, contextInfo: { participant
 const checks = [];
 let out = await say(ME, reply('/ver')); checks.push([/não liberou/.test(out), 'sem consentimento: recusa', out]);
 out = await say(AMIGO, { conversation: '/permitirver' }); checks.push([/Liberado/.test(out), 'amigo libera', out]);
-out = await say(ME, reply('/ver')); checks.push([!/não liberou/.test(out), 'com consentimento: tenta reenviar (aqui falha o download, normal offline)', out]);
+out = await say(ME, reply('/ver')); checks.push([!/não liberou/.test(out), 'com consentimento: passa da checagem (sem chave da mídia, explica o motivo)', out]);
 out = await say(AMIGO, { conversation: '/bloquearver' }); out = await say(ME, reply('/ver')); checks.push([/não liberou/.test(out), 'depois de bloquear: recusa de novo', out]);
 out = await say(ME, { extendedTextMessage: { text: '/ver', contextInfo: { participant: AMIGO, stanzaId: 'X', quotedMessage: { imageMessage: { mimetype: 'image/jpeg' } } } } }); checks.push([/não é de visualização única/.test(out), 'foto normal: avisa', out]);
 for (const [ok, name, o] of checks) console.log(`${ok ? '✅' : '❌'} ${name}: ${o.replace(/\s+/g, ' ').slice(0, 110)}`);

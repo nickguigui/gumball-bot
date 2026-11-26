@@ -67,10 +67,14 @@ export async function handleMessage(sock, m) {
     const ok = await cmd.run(ctx);
     if (cmd.done && ok !== false) ctx.react(cmd.done);
   } catch (e) {
-    console.error(`/${cmd.name}:`, e);
     if (!ctx.isGroup && e instanceof TypeError) return ctx.reply(onlyGroup).catch(() => {});
-    const msg = e?.userMessage || e?.message || 'Falha desconhecida';
-    await ctx.reply(`❌ *Erro:* ${msg}`).catch(() => {});
+    // Explicacao de uso / aviso esperado: mostra so a mensagem (sem "Erro" e sem ⚠️)
+    if (e?.userMessage) {
+      const t = e.userMessage;
+      return ctx.reply(/^\p{Extended_Pictographic}|^\*/u.test(t) ? t : `💡 ${t}`).catch(() => {});
+    }
+    console.error(`/${cmd.name}:`, e);
+    await ctx.reply(`❌ *Erro:* ${e?.message || 'Falha desconhecida'}`).catch(() => {});
     ctx.react('⚠️');
   }
 }
