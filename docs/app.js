@@ -154,9 +154,10 @@ async function openPanel() {
 async function loadGroups() {
   $('#pn-grupos').innerHTML = '<li class="muted" style="padding:12px 6px">Carregando seus grupos...</li>';
   try {
-    grupos = (await api('/api/grupos')).grupos;
+    // com nome primeiro, em ordem alfabetica; "sem admin" e so informacao (fica no subtitulo, nao e erro)
+    grupos = (await api('/api/grupos')).grupos.map(g => ({ ...g, nome: g.nome || '' })).sort((a, b) => (!a.nome.trim() - !b.nome.trim()) || a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' }));
     $('#pn-grupos').innerHTML = grupos.length ? grupos.map((g, i) => {
-      const selo = !g.bot ? '<span class="selo off">Desligado</span>' : !g.admin ? '<span class="selo warn">Sem admin</span>' : '<span class="selo">Ligado</span>';
+      const selo = !g.bot ? '<span class="selo off">Desligado</span>' : '<span class="selo">Ligado</span>';
       return `<li><button data-g="${i}"><span class="av">${esc([...g.nome.trim()][0] || 'G')}</span><span class="g-txt"><b>${esc(g.nome || 'Grupo sem nome')}</b><small>${g.membros} ${g.membros === 1 ? 'pessoa' : 'pessoas'}${g.admin ? '' : ' · o bot não é admin'}</small></span>${selo}</button></li>`;
     }).join('') : '<li class="muted" style="padding:12px 6px">Seu número ainda não está em nenhum grupo.</li>';
   } catch (err) { $('#pn-grupos').innerHTML = `<li class="muted" style="padding:12px 6px">${esc(err.message)}</li>`; }

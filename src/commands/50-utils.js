@@ -87,6 +87,18 @@ async function footballData(q) {
   return `📅 *${code ? `PRÓXIMOS JOGOS: ${LIGA_NOME[code] || code}` : 'PRÓXIMOS JOGOS DE DESTAQUE'}*\n_Fonte: football-data.org • escolha a liga: /futebol brasileirao, champions, premier, laliga..._\n\n───────────────────────\n\n${blocks.join('\n\n')}`;
 }
 
+// Cotacoes em reais: AwesomeAPI (com variacao do dia); reserva sem chave: open.er-api + CoinGecko
+async function cotacoes() {
+  const a = await getJson('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,BTC-BRL,ARS-BRL', { timeout: 8000 }).catch(() => null);
+  if (a?.USDBRL) return { fonte: 'AwesomeAPI', ...Object.fromEntries(['USD', 'EUR', 'GBP', 'ARS', 'BTC'].filter(k => a[k + 'BRL']).map(k => [k, { bid: Number(a[k + 'BRL'].bid), pct: Number(a[k + 'BRL'].pctChange) }])) };
+  const [e, c] = await Promise.all([getJson('https://open.er-api.com/v6/latest/BRL', { timeout: 8000 }).catch(() => null), getJson('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=brl&include_24hr_change=true', { timeout: 8000 }).catch(() => null)]);
+  if (!e?.rates?.USD) return null;
+  const out = { fonte: 'ExchangeRate-API' + (c ? ' e CoinGecko' : '') };
+  for (const k of ['USD', 'EUR', 'GBP', 'ARS']) if (e.rates[k]) out[k] = { bid: 1 / e.rates[k], pct: null };
+  if (c?.bitcoin?.brl) out.BTC = { bid: c.bitcoin.brl, pct: c.bitcoin.brl_24h_change ?? null };
+  return out;
+}
+
 export const commands = [
   {
     name: 'gpt', category: CAT, react: '🧠', done: '✅', run: async ctx => {
@@ -128,21 +140,29 @@ export const commands = [
   },
   {
     name: 'dolarhoje', aliases: ['moedas', 'cotacao', 'cotação', 'dolar', 'dólar'], category: CAT, react: '💵', run: async ctx => {
-      try {
-        const j = await getJson('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,BTC-BRL,ARS-BRL');
-        const f = (k, e, n) => { const x = j[k]; return `${e} *${n}:* R$ ${Number(x.bid).toLocaleString('pt-BR', { maximumFractionDigits: k.startsWith('BTC') ? 0 : 4 })} _(${Number(x.pctChange) >= 0 ? '📈 +' : '📉 '}${x.pctChange}%)_`; };
-        return ctx.reply(`💵 *COTAÇÕES DO DIA*\n\n${f('USDBRL', '🇺🇸', 'Dólar')}\n${f('EURBRL', '🇪🇺', 'Euro')}\n${f('GBPBRL', '🇬🇧', 'Libra')}\n${f('ARSBRL', '🇦🇷', 'Peso argentino')}\n${f('BTCBRL', '₿', 'Bitcoin')}\n\n🕒 _Atualizado: ${new Date(j.USDBRL.create_date.replace(' ', 'T') + '-03:00').toLocaleString('pt-BR', { timeZone: config.timezone })}_`);
-      } catch { throw new UserError('*Erro Interno:* Não foi possível processar a consulta cambial no momento. Verifique a estabilidade da API.'); }
+      const q = await cotacoes();
+      if (!q) throw new UserError('😕 Não consegui as cotações agora (os serviços de câmbio não responderam). Tente de novo daqui a pouco.');
+      const f = (k, e, n) => { const x = q[k]; if (!x) return ''; return `${e} *${n}:* R$ ${x.bid.toLocaleString('pt-BR', { maximumFractionDigits: k === 'BTC' ? 0 : 4 })}${x.pct != null ? ` _(${x.pct >= 0 ? '📈 +' : '📉 '}${x.pct.toFixed(2)}%)_` : ''}
+`; };
+      return ctx.reply(`💵 *COTAÇÕES DO DIA*
+
+${f('USD', '🇺🇸', 'Dólar')}${f('EUR', '🇪🇺', 'Euro')}${f('GBP', '🇬🇧', 'Libra')}${f('ARS', '🇦🇷', 'Peso argentino')}${f('BTC', '₿', 'Bitcoin')}
+_Fonte: ${q.fonte}_`);
     },
   },
   {
     name: 'converter', category: EXT, react: '💱', run: async ctx => {
       const [v, from, to] = [Number((ctx.args[0] || '').replace(',', '.')), (ctx.args[1] || '').toUpperCase(), (ctx.args[2] || 'BRL').toUpperCase()];
       if (!v || !from) return ctx.reply('💱 *Uso:* /converter 100 usd brl');
+      let rate = null;
       const j = await getJson(`https://economia.awesomeapi.com.br/json/last/${from}-${to}`).catch(() => null);
-      const rate = j && Number(Object.values(j)[0]?.bid);
+      rate = j && Number(Object.values(j)[0]?.bid);
+      if (!rate) { const e = await getJson(`https://open.er-api.com/v6/latest/${from}`).catch(() => null); rate = e?.rates?.[to] || null; }
       if (!rate) return ctx.reply('❌ Par de moedas não encontrado.');
-      return ctx.reply(`💱 *CONVERSÃO*\n\n${v.toLocaleString('pt-BR')} ${from} = *${(v * rate).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} ${to}*\n_Taxa: ${rate}_`);
+      return ctx.reply(`💱 *CONVERSÃO*
+
+${v.toLocaleString('pt-BR')} ${from} = *${(v * rate).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} ${to}*
+_Taxa: ${rate}_`);
     },
   },
   {
