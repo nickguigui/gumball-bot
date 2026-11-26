@@ -22,8 +22,17 @@ export const isUrl = s => /^https?:\/\//i.test(s || '');
 async function download(target, args, wantExt) {
   const dir = await tmpdir();
   try {
-    await run(config.ytdlp, [...base(), ...args, '-o', path.join(dir, 'media.%(ext)s'), target], { maxBuffer: 32 << 20, timeout: 300000 })
-      .catch(e => { throw new UserError(/max-filesize|larger than/i.test(e.stderr || '') ? `Arquivo maior que ${config.maxDownloadMB} MB.` : 'Não consegui baixar esse conteúdo. Verifique o link ou tente outro.'); });
+    // O YouTube as vezes recusa servidores ("confirm you're not a bot"): tenta outros clientes do YouTube
+    const yt = /youtu\.?be|^ytsearch/i.test(target);
+    const tries = yt ? [[], ['--extractor-args', 'youtube:player_client=tv_simply,tv,web_safari'], ['--extractor-args', 'youtube:player_client=mweb,android_vr,ios']] : [[]];
+    let err = null;
+    for (const extra of tries) {
+      err = await run(config.ytdlp, [...base(), ...extra, ...args, '-o', path.join(dir, 'media.%(ext)s'), target], { maxBuffer: 32 << 20, timeout: 300000 }).then(() => null, e => e);
+      if (!err) break;
+      console.error(`yt-dlp${extra.length ? ' (' + extra[1] + ')' : ''}: ${String(err.stderr || err.message).trim().split('\n').pop().slice(0, 250)}`);
+      if (/max-filesize|larger than/i.test(err.stderr || '')) break;
+    }
+    if (err) throw new UserError(/max-filesize|larger than/i.test(err.stderr || '') ? `Arquivo maior que ${config.maxDownloadMB} MB.` : 'Não consegui baixar esse conteúdo. Verifique o link ou tente outro.');
     const files = (await readdir(dir)).filter(f => f.startsWith('media.'));
     const file = files.find(f => !wantExt || f.endsWith('.' + wantExt)) || files[0];
     if (!file) throw new UserError('O download não gerou nenhum arquivo.');
