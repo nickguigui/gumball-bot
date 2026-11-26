@@ -62,6 +62,11 @@ function start(phone, { pairing = false } = {}) {
     console.warn(`[${mask(phone)}] ${s.slice(0, 300)}`);
     p.log.push(`${new Date().toISOString().slice(11, 19)} ${s.slice(0, 500)}`); if (p.log.length > 200) p.log.shift();
   });
+  // log persistente (vai junto no estado criptografado), sem conteudo de mensagem
+  const logFile = path.join(ROOT, phone, 'diag.log');
+  try { const old = fs.readFileSync(logFile, 'utf8').split('\n'); if (old.length > 600) fs.writeFileSync(logFile, old.slice(-300).join('\n')); } catch {}
+  const _push = p.log.push.bind(p.log);
+  p.log.push = (...l) => { try { fs.appendFileSync(logFile, l.join('\n') + '\n'); } catch {} return _push(...l); };
   child.on('message', msg => {
     p.log?.push(`${new Date().toISOString().slice(11, 19)} [ipc] ${msg.type}${msg.error ? ': ' + msg.error : ''}`);
     if (msg.type === 'pair') { p.state = 'pairing'; p.code = msg.code; p.codeAt = Date.now(); }
@@ -127,7 +132,7 @@ const routes = {
     const k = url.searchParams.get('k') || '';
     if (!process.env.ADMIN_KEY || k.length !== process.env.ADMIN_KEY.length || !crypto.timingSafeEqual(Buffer.from(k), Buffer.from(process.env.ADMIN_KEY))) return [404, { erro: 'Não encontrado' }];
     const phone = normPhone(url.searchParams.get('tel')); const p = phone && procs.get(phone);
-    return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null, morto: phone ? dead.get(phone) || null : null }];
+    return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null, morto: phone ? dead.get(phone) || null : null, historico: phone ? (() => { try { return fs.readFileSync(path.join(ROOT, phone, 'diag.log'), 'utf8').trim().split('\n').slice(-Number(url.searchParams.get('n') || 120)); } catch { return []; } })() : [] }];
   },
   'GET /api/saude': async () => [200, { ok: true, numeros: Object.keys(reg.tenants).length, online: [...procs.values()].filter(p => p.state === 'connected').length }],
 

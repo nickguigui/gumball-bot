@@ -100,7 +100,7 @@ async function connect() {
       // Aceita so se for seu e recente (evita reprocessar historico).
       if (type !== 'notify') {
         const age = Date.now() / 1000 - Number(m.messageTimestamp || 0);
-        if (!(type === 'append' && m.key.fromMe && age < 120)) continue;
+        if (!(type === 'append' && m.key.fromMe && age < 600)) continue; // 10 min: cobre a troca de turno do servidor
       }
       handleMessage(sock, m).catch(e => console.error('handler:', e));
     }
