@@ -55,6 +55,7 @@ jobs:
           REMOVEBG_API_KEY: ${{ secrets.REMOVEBG_API_KEY }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          set +e  # erros tratados um a um (um kill de processo ja morto nao pode derrubar o servidor)
           git config user.name "gumball-servidor"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           publicar() { # $1 = arquivos, $2 = mensagem
