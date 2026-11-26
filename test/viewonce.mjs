@@ -1,0 +1,20 @@
+// Teste offline do /ver com consentimento. Uso: node test/viewonce.mjs
+process.env.DATA_DIR = './data-test-vo'; process.env.SEND_MIN_MS = '0'; process.env.SEND_JITTER_MS = '0'; process.env.DEFAULT_BOT_ON = 'true';
+const { loadCommands } = await import('../src/registry.js');
+const { handleMessage } = await import('../src/handler.js');
+await loadCommands();
+const G = '120363000000000001@g.us', ME = '111111111111111@lid', AMIGO = '222222222222222@lid';
+const sent = [];
+const sock = { user: { id: '999@s.whatsapp.net' }, sendMessage: async (j, c) => { sent.push(c); return { key: { id: 'S' + sent.length } }; }, groupMetadata: async () => ({ participants: [{ id: ME }, { id: AMIGO }] }) };
+let n = 0;
+const say = async (from, message) => { const b = sent.length; await handleMessage(sock, { key: { remoteJid: G, id: 'M' + (++n), participant: from }, messageTimestamp: Math.floor(Date.now() / 1000), message }); await new Promise(r => setTimeout(r, 30)); return sent.slice(b).map(c => c.text || (c.react ? '' : Object.keys(c)[0])).filter(Boolean).join(' | '); };
+const vo = { conversation: undefined };
+const reply = text => ({ extendedTextMessage: { text, contextInfo: { participant: AMIGO, stanzaId: 'VO1', quotedMessage: { viewOnceMessageV2: { message: { imageMessage: { mimetype: 'image/jpeg', viewOnce: true } } } } } } });
+const checks = [];
+let out = await say(ME, reply('/ver')); checks.push([/não liberou/.test(out), 'sem consentimento: recusa', out]);
+out = await say(AMIGO, { conversation: '/permitirver' }); checks.push([/Liberado/.test(out), 'amigo libera', out]);
+out = await say(ME, reply('/ver')); checks.push([!/não liberou/.test(out), 'com consentimento: tenta reenviar (aqui falha o download, normal offline)', out]);
+out = await say(AMIGO, { conversation: '/bloquearver' }); out = await say(ME, reply('/ver')); checks.push([/não liberou/.test(out), 'depois de bloquear: recusa de novo', out]);
+out = await say(ME, { extendedTextMessage: { text: '/ver', contextInfo: { participant: AMIGO, stanzaId: 'X', quotedMessage: { imageMessage: { mimetype: 'image/jpeg' } } } } }); checks.push([/não é de visualização única/.test(out), 'foto normal: avisa', out]);
+for (const [ok, name, o] of checks) console.log(`${ok ? '✅' : '❌'} ${name}: ${o.replace(/\s+/g, ' ').slice(0, 110)}`);
+process.exit(checks.every(c => c[0]) ? 0 : 1);

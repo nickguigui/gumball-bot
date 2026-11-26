@@ -26,7 +26,7 @@ export const MENU = [
   ['𝗚𝗨𝗠𝗕𝗔𝗟𝗟 𝗘𝗫𝗧𝗥𝗔𝗦', [
     ['🎨 MAIS FIGURINHAS', 's bratanimado bratbranco bratrosa bratpreto bratvinho bratazul redonda togif pacote addpacote limparpacote preso rip desfoque pixel inverter cinza sepia espelho triste brilho contraste'],
     ['🎉 MAIS BRINCADEIRAS', 'casal sorteio pergunta moeda cantada conselho fato frase escolher numero eununca vod verdade desafio casais amigosecreto participar sairamigo meuamigo level'],
-    ['🧰 MAIS UTILIDADES', 'notas anotar rmnota niver aniversarios baixar playvideo ytsearch moedas converter cep ddd feriados wiki encurtar fazernick tagme wame lembretes lista vou naovou fecharlista parar rankjogos'],
+    ['🧰 MAIS UTILIDADES', 'permitirver bloquearver notasanotar rmnota niver aniversarios baixar playvideo ytsearch moedas converter cep ddd feriados wiki encurtar fazernick tagme wame lembretes lista vou naovou fecharlista parar rankjogos'],
   ]],
 ];
 export const MENU_ADM = [

@@ -50,7 +50,7 @@ export function buildContext(sock, m) {
     sock, m, jid, isGroup, sender, senderAlt, type, message, body,
     pushName: m.pushName || '',
     mentions: ctxInfo.mentionedJid || [],
-    quoted: quotedMsg ? { message: quotedMsg, sender: ctxInfo.participant, id: ctxInfo.stanzaId, type: getContentType(quotedMsg), text: textOf(quotedMsg) } : null,
+    quoted: quotedMsg ? { message: quotedMsg, raw: ctxInfo.quotedMessage, sender: ctxInfo.participant, id: ctxInfo.stanzaId, type: getContentType(quotedMsg), text: textOf(quotedMsg) } : null,
     cmd: '', args: [], q: '',
     tag: j => '@' + numId(j),
     get user() { return db.user(sender); },
