@@ -90,6 +90,15 @@ function start(phone, { pairing = false } = {}) {
   });
   return p;
 }
+// Pergunta algo ao processo do numero e espera a resposta (por id)
+function ask(p, msg, ms = 15000) {
+  const id = crypto.randomBytes(6).toString('hex');
+  return new Promise(res => {
+    const t = setTimeout(() => res(null), ms);
+    p.waiters.push(function w(m) { if (m.type === 'reply' && m.id === id) { clearTimeout(t); res(m.data); } else p.waiters.push(w); });
+    p.child.send({ ...msg, id });
+  });
+}
 const waitFor = (p, types, ms) => new Promise(res => {
   if (types.includes(p.state === 'pairing' && p.code ? 'pair' : p.state)) return res({ type: p.state === 'pairing' ? 'pair' : p.state });
   const t = setTimeout(() => res({ type: 'timeout' }), ms);
@@ -183,6 +192,19 @@ const routes = {
     const cur = JSON.parse(fs.readFileSync(f, 'utf8')); if (typeof b.privateChats === 'boolean') cur.privateChats = b.privateChats;
     fs.writeFileSync(f, JSON.stringify(cur, null, 1)); procs.get(phone)?.child.send({ type: 'reload-settings' });
     return [200, { config: cur }];
+  },
+  // Grupos do numero, cada um com suas configuracoes (o bot responde por IPC)
+  'GET /api/grupos': async (req) => {
+    const phone = auth(req); if (!phone) return [401, { erro: 'Entre de novo.' }];
+    const p = procs.get(phone); if (p?.state !== 'connected') return [409, { erro: 'O bot está ligando. Tente em alguns segundos.' }];
+    const r = await ask(p, { type: 'groups' }); return r ? [200, { grupos: r }] : [404, { erro: 'O bot não respondeu. Tente de novo.' }];
+  },
+  'POST /api/grupo': async (req) => {
+    const phone = auth(req); if (!phone) return [401, { erro: 'Entre de novo.' }];
+    const { jid, bot, cfg } = await body(req);
+    if (!/^[\d-]+@g\.us$/.test(jid || '')) return [400, { erro: 'Grupo inválido.' }];
+    const p = procs.get(phone); if (p?.state !== 'connected') return [409, { erro: 'O bot está ligando. Tente em alguns segundos.' }];
+    const r = await ask(p, { type: 'group-set', jid, patch: { bot, cfg } }); return r ? [200, r] : [404, { erro: 'O bot não respondeu. Tente de novo.' }];
   },
   'POST /api/canais': async (req) => {
     const phone = auth(req); if (!phone) return [401, { erro: 'Entre de novo.' }];

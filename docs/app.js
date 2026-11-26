@@ -107,7 +107,7 @@ async function api(path, opts = {}) {
   if (!r.ok) throw new Error(j.erro || `Erro ${r.status}`);
   return j;
 }
-const view = id => ['cx-numero', 'cx-parear', 'cx-entrar', 'painel'].forEach(v => { $('#' + v).hidden = v !== id; });
+const view = id => ['cx-numero', 'cx-parear', 'cx-entrar', 'painel', 'pn-grupo'].forEach(v => { $('#' + v).hidden = v !== id; });
 const showErr = (el, msg) => { $(el).textContent = msg; $(el).hidden = !msg; };
 let ticket = '', pollTimer = null;
 $('#cx-form').addEventListener('submit', async e => {
@@ -139,7 +139,8 @@ $('#cx-login').addEventListener('submit', async e => {
 });
 $$('.cx-voltar').forEach(b => b.addEventListener('click', () => { clearInterval(pollTimer); view('cx-numero'); }));
 
-const ESTADOS = { connected: ['Conectado', 'on'], reconnecting: ['Reconectando', ''], starting: ['Ligando', ''], offline: ['Desligado', 'off'], 'logged-out': ['Desconectado no celular', 'off'] };
+const ESTADOS = { connected: ['Online', 'on'], reconnecting: ['Reconectando', ''], starting: ['Ligando', ''], offline: ['Desligado', 'off'], 'logged-out': ['Desconectado no celular', 'off'] };
+let grupos = [], atual = null, cmdCats = null;
 async function openPanel() {
   try {
     const p = await api('/api/painel'); view('painel');
@@ -147,8 +148,83 @@ async function openPanel() {
     const [txt, cls] = ESTADOS[p.estado] || [p.estado, '']; $('#pn-estado').textContent = txt; $('#pn-estado').className = 'estado ' + cls;
     $('#pn-privado').checked = !!p.config.privateChats;
     $('#pn-canais').innerHTML = p.canais.length ? p.canais.map(c => `<li><div><b>${esc(c.emoji || '📰')} ${esc(c.name || c.topic)}</b><p>${esc(c.topic)}${c.invite ? '' : '. Falta o link do canal.'}</p></div><button class="btn text" data-del="${esc(c.id)}">Remover</button></li>`).join('') : '<li><div><p>Nenhum canal ainda. Crie um sobre o assunto que quiser.</p></div></li>';
+    loadGroups();
   } catch { view('cx-numero'); }
 }
+async function loadGroups() {
+  $('#pn-grupos').innerHTML = '<li class="muted" style="padding:12px 6px">Carregando seus grupos...</li>';
+  try {
+    grupos = (await api('/api/grupos')).grupos;
+    $('#pn-grupos').innerHTML = grupos.length ? grupos.map((g, i) => {
+      const selo = !g.bot ? '<span class="selo off">Desligado</span>' : !g.admin ? '<span class="selo warn">Sem admin</span>' : '<span class="selo">Ligado</span>';
+      return `<li><button data-g="${i}"><span class="av">${esc([...g.nome.trim()][0] || 'G')}</span><span class="g-txt"><b>${esc(g.nome || 'Grupo sem nome')}</b><small>${g.membros} ${g.membros === 1 ? 'pessoa' : 'pessoas'}${g.admin ? '' : ' · o bot não é admin'}</small></span>${selo}</button></li>`;
+    }).join('') : '<li class="muted" style="padding:12px 6px">Seu número ainda não está em nenhum grupo.</li>';
+  } catch (err) { $('#pn-grupos').innerHTML = `<li class="muted" style="padding:12px 6px">${esc(err.message)}</li>`; }
+}
+$('#pn-grupos').addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (b) openGroup(grupos[+b.dataset.g]); });
+$('#pn-atualizar').addEventListener('click', loadGroups);
+$('#g-voltar').addEventListener('click', () => { view('painel'); loadGroups(); });
+$('#g-cancelar').addEventListener('click', () => openGroup(atual));
+
+const TIPOS = { contato: 'contato', documento: 'documento', canal: 'encaminhar de canal', enquete: 'enquete', evento: 'evento', figurinha: 'figurinha', imagem: 'imagem', localizacao: 'localização', trava: 'mensagem gigante/trava', produto: 'produto/catálogo', unica: 'visualização única', video: 'vídeo', audio: 'áudio' };
+$('#g-tipos').innerHTML = Object.entries(TIPOS).map(([k, l]) => `<label><input type="checkbox" value="${k}">${l}</label>`).join('');
+const list = v => (v || '').split(',').map(x => x.trim()).filter(Boolean);
+let respostas = {}, agendas = [];
+
+async function openGroup(g) {
+  atual = g; view('pn-grupo'); window.scrollTo({ top: 0 });
+  const c = g.cfg || {}, f = $('#g-form');
+  $('#g-av').textContent = [...g.nome.trim()][0] || 'G'; $('#g-nome').textContent = g.nome || 'Grupo sem nome';
+  $('#g-info').textContent = `Grupo · ${g.membros} ${g.membros === 1 ? 'pessoa' : 'pessoas'} · ${g.admin ? 'o bot é admin' : 'o bot não é admin (moderação não funciona)'}`;
+  f.bot.checked = g.bot; f.fun.checked = !c.noFun; f.welcome.checked = !!c.welcome; f.welcomeText.value = c.welcomeText || '';
+  const lm = c.linkMode || (c.antilink ? 'todos' : 'off'); f.querySelector(`[name=linkMode][value=${lm}]`).checked = true;
+  for (const k of ['soadm', 'antiapagar', 'antieditar', 'autosticker', 'bye', 'captcha', 'antifake', 'banLinks', 'antipalavra', 'antiflood']) f[k].checked = !!c[k];
+  f.querySelector(`[name=viewOnceMode][value=${c.viewOnceMode || 'optin'}]`).checked = true;
+  f.tempocmd.value = c.tempocmd || 0; f.byeText.value = c.byeText || ''; f.allowDDI.value = (c.allowDDI || []).join(', '); f.rules.value = c.rules || '';
+  f.allowLinks.value = (c.allowLinks || []).join(', '); f.badwords.value = (c.badwords || []).join(', '); f.maxadv.value = c.maxadv || 3;
+  $$('#g-tipos input').forEach(i => { i.checked = (c.antiTypes || []).includes(i.value); });
+  f.autoOpen.value = c.autoOpen || ''; f.autoClose.value = c.autoClose || ''; f.stickerPack.value = c.stickerPack || ''; f.stickerAuthor.value = c.stickerAuthor || '';
+  respostas = { ...(c.autoreplies || {}) }; agendas = [...(c.agendas || [])]; drawRespostas(); drawAgendas();
+  if (!cmdCats) cmdCats = (await fetch('commands.json').then(r => r.json()).catch(() => ({ categories: [] }))).categories.filter(x => !/admin/.test(x.cat));
+  const blocked = c.blockedCmds || [];
+  $('#g-cmds').innerHTML = cmdCats.map(cat => `<div class="cmd-sec"><b>${esc(cat.cat)}</b><div class="chips">${cat.cmds.map(n => `<label><input type="checkbox" value="${esc(n)}" ${blocked.includes(n) ? '' : 'checked'}>/${esc(n)}</label>`).join('')}</div></div>`).join('');
+  previewBV(); $('#g-status').textContent = '';
+}
+function previewBV() {
+  const t = ($('#g-form').welcomeText.value || '👋 Bem-vindo(a) ao {grupo}, {membro}! Manda um /menu para ver o que eu sei fazer.').replace(/\{grupo\}/g, atual?.nome || 'grupo').replace(/\{membro\}/g, '@Ana');
+  $('#g-prev-bv').innerHTML = `<span>${esc(t)}</span>`;
+}
+$('#g-form').welcomeText.addEventListener('input', previewBV);
+$$('.chipbtn[data-ins]').forEach(b => b.addEventListener('click', () => { const ta = $('#g-form')[b.dataset.ins]; ta.setRangeText(b.dataset.v, ta.selectionStart, ta.selectionEnd, 'end'); ta.focus(); previewBV(); }));
+function drawRespostas() {
+  $('#g-respostas').innerHTML = Object.entries(respostas).map(([k, v]) => `<li><div><b>${esc(k)}</b><p>${esc(v)}</p></div><button type="button" class="btn text" data-resp="${esc(k)}">Remover</button></li>`).join('') || '<li><div><p>Nenhuma resposta automática.</p></div></li>';
+}
+$('#g-respostas').addEventListener('click', e => { const k = e.target.dataset.resp; if (k) { delete respostas[k]; drawRespostas(); } });
+$('#g-resp-add').addEventListener('click', () => { const k = $('#g-resp-palavra').value.trim().toLowerCase(), v = $('#g-resp-texto').value.trim(); if (!k || !v) return; respostas[k] = v; $('#g-resp-palavra').value = $('#g-resp-texto').value = ''; drawRespostas(); });
+function drawAgendas() {
+  $('#g-agendas').innerHTML = agendas.map((a, i) => `<li><div><b>${esc(a.time)}</b><p>${esc(a.text)}</p></div><button type="button" class="btn text" data-ag="${i}">Remover</button></li>`).join('') || '<li><div><p>Nada agendado.</p></div></li>';
+}
+async function saveGroup(extra) {
+  const f = $('#g-form'); const st = $('#g-status'); st.textContent = 'Salvando...';
+  const cfg = {
+    noFun: !f.fun.checked, welcome: f.welcome.checked, welcomeText: f.welcomeText.value.trim(), linkMode: f.querySelector('[name=linkMode]:checked').value,
+    soadm: f.soadm.checked, antiapagar: f.antiapagar.checked, antieditar: f.antieditar.checked, autosticker: f.autosticker.checked, viewOnceMode: f.querySelector('[name=viewOnceMode]:checked').value,
+    tempocmd: Math.max(0, +f.tempocmd.value || 0), bye: f.bye.checked, byeText: f.byeText.value.trim(), captcha: f.captcha.checked, antifake: f.antifake.checked,
+    allowDDI: list(f.allowDDI.value).map(x => x.replace(/\D/g, '')).filter(Boolean), rules: f.rules.value.trim(), banLinks: f.banLinks.checked,
+    allowLinks: list(f.allowLinks.value.toLowerCase()), antipalavra: f.antipalavra.checked, badwords: list(f.badwords.value.toLowerCase()), antiflood: f.antiflood.checked,
+    maxadv: Math.min(10, Math.max(1, +f.maxadv.value || 3)), antiTypes: $$('#g-tipos input:checked').map(i => i.value),
+    autoOpen: f.autoOpen.value, autoClose: f.autoClose.value, stickerPack: f.stickerPack.value.trim(), stickerAuthor: f.stickerAuthor.value.trim(),
+    autoreplies: respostas, agendas, blockedCmds: $$('#g-cmds input:not(:checked)').map(i => i.value), ...extra,
+  };
+  try {
+    const r = await api('/api/grupo', { method: 'POST', body: { jid: atual.jid, bot: f.bot.checked, cfg } });
+    atual.bot = r.bot; atual.cfg = r.cfg; st.textContent = 'Salvo ✓';
+  } catch (err) { st.textContent = err.message; }
+}
+$('#g-form').addEventListener('submit', e => { e.preventDefault(); saveGroup(); });
+$('#g-agendas').addEventListener('click', e => { const i = e.target.dataset.ag; if (i !== undefined) { agendas.splice(+i, 1); drawAgendas(); saveGroup(); } });
+$('#g-ag-add').addEventListener('click', () => { const t = $('#g-ag-hora').value, m = $('#g-ag-msg').value.trim(); if (!t || !m) return; agendas.push({ id: Date.now().toString(36), time: t, text: m }); $('#g-ag-msg').value = ''; drawAgendas(); saveGroup(); });
+
 $('#pn-privado').addEventListener('change', async e => {
   try { await api('/api/config', { method: 'POST', body: { privateChats: e.target.checked } }); } catch (err) { e.target.checked = !e.target.checked; alert(err.message); }
 });

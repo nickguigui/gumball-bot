@@ -91,6 +91,24 @@ export async function videoToSticker(buffer, ext = 'mp4', { pack, author } = {})
     '-loop', '0', '-an', '-vcodec', 'libwebp', '-lossless', '0', '-q:v', '50', '-preset', 'default'], 'webp');
   return addExif(webp, pack, author);
 }
+// Audio de um video/audio -> ogg/opus mono (formato da figurinha com som). null se nao tiver audio.
+export async function toOggOpus(buffer, ext, maxSec = 30) {
+  try {
+    const out = await ffmpeg(buffer, ext, ['-vn', '-t', String(maxSec), '-ac', '1', '-c:a', 'libopus', '-b:a', '64k'], 'ogg');
+    return out.length > 800 ? out : null;
+  } catch { return null; }
+}
+// Junta um mp4 (sem som) com um audio; o video dura o maior dos dois (ultimo quadro congela)
+export async function muxAudio(mp4, audio) {
+  const dir = await tmpdir();
+  try {
+    const v = path.join(dir, 'v.mp4'), a = path.join(dir, 'a.ogg'), out = path.join(dir, 'o.mp4');
+    await writeFile(v, mp4); await writeFile(a, audio);
+    await run(config.ffmpeg, ['-y', '-hide_banner', '-loglevel', 'error', '-i', v, '-i', a, '-filter_complex', '[0:v]tpad=stop_mode=clone:stop_duration=30[v]', '-map', '[v]', '-map', '1:a', '-shortest', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', 'faststart', out], { timeout: 120000 });
+    return await readFile(out);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+}
+export const isAnimatedWebp = webp => webp.subarray(0, 64).includes('VP8X') && (webp.indexOf('ANIM') > 0 && webp.indexOf('ANIM') < 200);
 export async function stickerToImage(webp) { return sharp(webp, { animated: false }).png().toBuffer(); }
 export async function stickerToGif(webp) { return sharp(webp, { animated: true }).gif().toBuffer(); }
 export async function stickerToMp4(webp) {

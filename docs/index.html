@@ -153,27 +153,108 @@
   <!-- painel -->
   <div id="painel" hidden>
     <div class="painel-head">
-      <div><h2 class="section-title" style="margin:16px 0 4px">Seu bot</h2><p class="muted" style="margin:0"><span id="pn-num"></span></p><p style="margin:4px 0 0"><span id="pn-estado" class="estado"></span></p></div>
+      <div><h2 class="section-title" style="margin:16px 0 4px">Meu bot</h2><p class="muted" style="margin:0" id="pn-num"></p><p style="margin:4px 0 0"><span id="pn-estado" class="estado"></span></p></div>
       <button class="btn outlined" id="pn-sair"><span class="ms">logout</span>Sair</button>
     </div>
 
-    <h3 class="painel-sec">Comportamento</h3>
+    <h3 class="painel-sec">Seus grupos</h3>
+    <ul class="grupos" id="pn-grupos"><li class="muted">Carregando seus grupos...</li></ul>
+    <p class="muted small">Toque num grupo para escolher o que o bot faz nele. Faltou algum? <button class="linkbtn" id="pn-atualizar">Atualizar a lista</button>.</p>
+
+    <h3 class="painel-sec">No privado</h3>
     <ul class="opcoes">
       <li><div><b>Responder no privado</b><p>Use os comandos nas conversas privadas, inclusive na conversa "Você". Só você consegue usar.</p></div><input type="checkbox" class="switch" id="pn-privado" aria-label="Responder no privado"></li>
-      <li><div><b>Só você usa o bot</b><p>Comandos de outras pessoas são ignorados, em grupos e no privado.</p></div><span class="ms lock" title="Sempre ligado">lock</span></li>
     </ul>
 
     <h3 class="painel-sec">Canais automáticos</h3>
     <ul class="opcoes" id="pn-canais"></ul>
     <a class="btn tonal" href="#canal" data-tab="canal"><span class="ms">add</span>Criar canal automático</a>
 
-    <h3 class="painel-sec">Primeiros passos</h3>
-    <p class="muted">Mande <code>/menu</code> em qualquer grupo ou, com "Responder no privado" ligado, na sua conversa "Você".</p>
+    <h3 class="painel-sec">Precisa de ajuda?</h3>
+    <p class="muted">Mande <code>/menu</code> em qualquer grupo ligado. Dúvidas: <a href="https://livepix.gg/nickguigui" target="_blank" rel="noopener">fale com o Nick</a>.</p>
 
-    <h3 class="painel-sec perigo">Zona de perigo</h3>
+    <h3 class="painel-sec perigo">Desconectar o bot</h3>
     <ul class="opcoes">
-      <li><div><b>Desconectar o bot</b><p>Remove o bot do seu número e apaga seus dados do servidor.</p></div><button class="btn outlined danger" id="pn-desconectar">Desconectar</button></li>
+      <li><div><b>Desconectar</b><p>Tira o Gumball dos aparelhos conectados e apaga seus dados do servidor.</p></div><button class="btn outlined danger" id="pn-desconectar">Desconectar</button></li>
     </ul>
+  </div>
+
+  <!-- um grupo -->
+  <div id="pn-grupo" hidden>
+    <button class="btn text" id="g-voltar"><span class="ms">arrow_back</span>Meus grupos</button>
+    <div class="grupo-head"><span class="av" id="g-av"></span><div><h2 class="section-title" style="margin:0" id="g-nome"></h2><p class="muted" style="margin:2px 0 0" id="g-info"></p></div></div>
+
+    <form id="g-form">
+      <ul class="opcoes">
+        <li><div><b>Bot ligado neste grupo</b><p>Desligado, ele não responde nada aqui.</p></div><input type="checkbox" class="switch" name="bot"></li>
+        <li><div><b>Brincadeiras e jogos</b><p>Ship, forca, quiz, medidores…</p></div><input type="checkbox" class="switch" name="fun"></li>
+        <li class="col"><div class="row-sw"><div><b>Boas-vindas</b><p>Quem entra recebe esta mensagem.</p></div><input type="checkbox" class="switch" name="welcome"></div>
+          <textarea name="welcomeText" rows="2" placeholder="👋 Bem-vindo(a) ao {grupo}, {membro}! Manda um /menu para ver o que eu sei fazer."></textarea>
+          <p class="small muted">Colocar na mensagem: <button type="button" class="chipbtn" data-ins="welcomeText" data-v="{membro}">Nome da pessoa</button> <button type="button" class="chipbtn" data-ins="welcomeText" data-v="{grupo}">Nome do grupo</button></p>
+          <p class="small">Assim vai aparecer:</p><div class="preview-msg" id="g-prev-bv"></div></li>
+        <li class="col"><div><b>Apagar links</b><p>O link de quem não é admin some.</p></div>
+          <div class="seg"><label><input type="radio" name="linkMode" value="off">Não apagar</label><label><input type="radio" name="linkMode" value="grupo">Link de outro grupo</label><label><input type="radio" name="linkMode" value="todos">Qualquer link</label></div></li>
+      </ul>
+
+      <details class="mais"><summary><div><b>Mais opções</b><p>Entrada, moderação, horários, figurinhas, respostas e comandos</p></div></summary>
+        <h4>Quem usa o bot</h4>
+        <ul class="opcoes">
+          <li><div><b>Só admins usam comandos</b><p>Membros comuns não conseguem usar o bot.</p></div><input type="checkbox" class="switch" name="soadm"></li>
+          <li><div><b>Mostrar mensagens apagadas</b><p>Quando alguém apaga uma mensagem, o bot manda de novo aqui no grupo.</p></div><input type="checkbox" class="switch" name="antiapagar"></li>
+          <li><div><b>Mostrar mensagens editadas</b><p>Quando alguém edita uma mensagem, o bot mostra como ela era antes.</p></div><input type="checkbox" class="switch" name="antieditar"></li>
+          <li class="col"><div><b>Visualização única (/ver)</b><p>Quem pode ter a foto, vídeo ou áudio de visualização única reenviado no grupo.</p></div>
+            <div class="seg"><label><input type="radio" name="viewOnceMode" value="off">Restrito: ninguém</label><label><input type="radio" name="viewOnceMode" value="optin">Só quem liberar</label><label><input type="radio" name="viewOnceMode" value="optout">Todos, menos quem bloquear</label></div>
+            <p class="small muted">"Só quem liberar": cada um manda /permitirver. "Todos": quem não quiser manda /bloquearver (o bot avisa o grupo quando você liga).</p></li>
+          <li><div><b>Auto-figurinha</b><p>Toda foto ou vídeo do grupo vira figurinha.</p></div><input type="checkbox" class="switch" name="autosticker"></li>
+          <li><div><b>Espera entre comandos</b><p>Segundos que cada pessoa espera (0 = sem espera).</p></div><input type="number" name="tempocmd" min="0" max="300" class="num"></li>
+        </ul>
+        <h4>Entrada e saída</h4>
+        <ul class="opcoes">
+          <li class="col"><div class="row-sw"><div><b>Aviso de saída</b><p>Quando alguém sai do grupo.</p></div><input type="checkbox" class="switch" name="bye"></div>
+            <textarea name="byeText" rows="2" placeholder="👋 {membro} saiu do grupo. Vai tarde! 😜"></textarea>
+            <p class="small muted">Colocar na mensagem: <button type="button" class="chipbtn" data-ins="byeText" data-v="{membro}">Nome da pessoa</button></p></li>
+          <li><div><b>Confirmar que não é robô</b><p>Quem entra precisa digitar um código em 5 minutos, senão sai do grupo.</p></div><input type="checkbox" class="switch" name="captcha"></li>
+          <li class="col"><div class="row-sw"><div><b>Só números do Brasil</b><p>Quem entra com número de outro país sai do grupo.</p></div><input type="checkbox" class="switch" name="antifake"></div>
+            <label class="field"><input name="allowDDI" placeholder=" "><span>Outros países que podem entrar (ex.: 351 Portugal, 1 EUA)</span></label></li>
+          <li class="col"><div><b>Regras do grupo</b><p>Aparecem quando alguém manda /regras.</p></div><textarea name="rules" rows="3"></textarea></li>
+        </ul>
+        <h4>Moderação</h4>
+        <p class="small muted">Nunca vale para os admins. Tudo aqui precisa do bot como admin.</p>
+        <ul class="opcoes">
+          <li><div><b>Remover quem mandar link</b><p>Junto com "Apagar links", lá em cima.</p></div><input type="checkbox" class="switch" name="banLinks"></li>
+          <li class="col"><label class="field"><input name="allowLinks" placeholder=" "><span>Sites liberados (separados por vírgula, ex.: youtube.com, instagram.com)</span></label></li>
+          <li class="col"><div class="row-sw"><div><b>Apagar palavrão</b><p>Apaga mensagens com as palavras da lista.</p></div><input type="checkbox" class="switch" name="antipalavra"></div>
+            <label class="field"><input name="badwords" placeholder=" "><span>Palavras (separadas por vírgula)</span></label></li>
+          <li><div><b>Barrar quem manda mensagem demais</b><p>Mais de 7 mensagens em 10 segundos ganha uma advertência.</p></div><input type="checkbox" class="switch" name="antiflood"></li>
+          <li><div><b>Advertências até sair do grupo</b><p>Depois de quantas advertências a pessoa é removida.</p></div><input type="number" name="maxadv" min="1" max="10" class="num"></li>
+          <li class="col"><div><b>Apagar estes tipos de mensagem</b><p>Vale para quem não é admin.</p></div><div class="chips" id="g-tipos"></div></li>
+        </ul>
+        <h4>Abrir e fechar no horário</h4>
+        <p class="small muted">Fechado, só admins mandam mensagem. Precisa do bot como admin.</p>
+        <ul class="opcoes">
+          <li><div><b>Abrir todo dia às</b><p>Em branco: não abre sozinho.</p></div><input type="time" name="autoOpen" class="num"></li>
+          <li><div><b>Fechar todo dia às</b><p>Em branco: não fecha sozinho.</p></div><input type="time" name="autoClose" class="num"></li>
+        </ul>
+        <h4>Nome das figurinhas</h4>
+        <div class="row"><label class="field"><input name="stickerPack" placeholder=" "><span>Nome do pacote</span></label><label class="field"><input name="stickerAuthor" placeholder=" "><span>Autor</span></label></div>
+        <h4>Respostas automáticas</h4>
+        <p class="small muted">Quando alguém escrever a palavra, o bot responde (no máximo 1 vez a cada 30 segundos por palavra).</p>
+        <ul class="opcoes" id="g-respostas"></ul>
+        <div class="row"><label class="field"><input id="g-resp-palavra" placeholder=" "><span>Palavra</span></label><label class="field"><input id="g-resp-texto" placeholder=" "><span>Resposta</span></label></div>
+        <button type="button" class="btn tonal" id="g-resp-add" style="margin-top:8px"><span class="ms">add</span>Adicionar resposta</button>
+        <h4>Comandos ligados</h4>
+        <p class="small muted">Desmarque o que não quer neste grupo. Os comandos de admin ficam sempre ligados.</p>
+        <div id="g-cmds"></div>
+      </details>
+
+      <div class="savebar"><button class="btn filled" type="submit"><span class="ms">save</span>Salvar</button><button class="btn text" type="button" id="g-cancelar">Cancelar</button><span class="muted small" id="g-status" role="status"></span></div>
+    </form>
+
+    <h3 class="painel-sec">Mensagens agendadas</h3>
+    <p class="muted small">O bot manda todo dia no horário escolhido.</p>
+    <ul class="opcoes" id="g-agendas"></ul>
+    <div class="row"><label class="field"><input type="time" id="g-ag-hora" placeholder=" "><span>Horário</span></label><label class="field"><input id="g-ag-msg" placeholder=" "><span>Mensagem</span></label></div>
+    <button type="button" class="btn tonal" id="g-ag-add" style="margin-top:8px"><span class="ms">schedule</span>Agendar</button>
   </div>
 </section>
 </main>

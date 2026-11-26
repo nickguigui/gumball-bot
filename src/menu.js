@@ -7,31 +7,27 @@ import { db } from './db.js';
 const LINE = '────────────────────────';
 export const MENU = [
   ['𝗠𝗘𝗡𝗨 𝗣𝗥𝗜𝗡𝗖𝗜𝗣𝗔𝗟', [
-    ['🤝 SUPORTE DO BOT', 'topcmd alugar teste'],
-    ['🎨 FIGURINHAS & STICKERS', 'fig qc attp ttp textofig emojimix toimg take rename wasted procurado smeme brat brat2'],
-    ['🖼️ EDIÇÃO DE FOTOS', 'grid logo sfundo placa mudarfundo'],
-    ['⬇️ DOWNLOADS', 'tkk ytmp3 play play2 ytmp4 insta face pin lyrics'],
+    ['🤝 SUPORTE DO BOT', 'topcmd alugar teste suporte conectar bots'],
+    ['🎨 FIGURINHAS & STICKERS', 'fig s qc attp ttp textofig emojimix toimg togif take rename wasted procurado preso rip smeme brat brat2 bratanimado bratbranco bratrosa bratpreto bratvinho bratazul redonda pacote addpacote limparpacote'],
+    ['🖼️ EDIÇÃO DE FOTOS', 'grid logo sfundo placa mudarfundo desfoque pixel inverter cinza sepia espelho triste brilho contraste'],
+    ['⬇️ DOWNLOADS', 'tkk ytmp3 play play2 ytmp4 playvideo ytsearch baixar insta face pin lyrics'],
     ['🎥 VÍDEO', 'videoreverso videolento videorapido cortarvideo letreiro'],
-    ['🎵 ÁUDIO', 'tomp3 voz estourar grave reverb audioreverso audiorapido audiolento cortaraudio'],
-    ['🧰 UTILITÁRIOS', 'gpt ping admins linkgp listablock infogp dolarhoje celular afk futebol dados qr calcular signo filme cpf traduzir resumir clima ff lembrete noticias ver cinema palavras'],
+    ['🎵 ÁUDIO', 'tomp3 voz falar transcrever estourar grave reverb audioreverso audiorapido audiolento cortaraudio'],
+    ['🧰 UTILITÁRIOS', 'gpt ping admins linkgp listablock infogp dolarhoje moedas converter celular afk futebol dados qr calcular signo filme cpf traduzir resumir clima ff lembrete lembretes noticias ver permitirver bloquearver cinema palavras cep ddd feriados wiki encurtar fazernick tagme wame notas anotar rmnota niver aniversarios lista vou naovou fecharlista'],
   ]],
   ['𝗝𝗢𝗚𝗢𝗦 𝗘 𝗗𝗜𝗩𝗘𝗥𝗦𝗔𝗢', [
     ['💰 ECONOMIA', 'loja comprar inventario banco depositar retirar vender raspadinha perfil daily apostar trabalhar pix roubar resetarsaldo minerar pescar roleta'],
-    ['🤡 BRINCADEIRAS', 'gado foto piada tapa ship chance matar calvo burro corno magia maldicao bencao transformar hipnotizar congelar queimar eletrocutar envenenar ressuscitar teletransportar hackear clonar miniaturizar gigantizar assombrar possuir sequestrar forca inteligencia beleza charme aura fofura loucura preguica raiva azar bebida roupa serie anime time pais profissao crime virtude'],
-    ['🎮 JOGOS', 'duelo ppt bau anagrama quiz jogodaforca velha bandeira matematica adedonha charada'],
-    ['💍 MATRIMÔNIOS', 'casar trair divorciar beijar abracar brigar flores joia ursinho chocolate'],
+    ['🤡 BRINCADEIRAS', 'gado foto piada tapa ship chance casal sorteio pergunta moeda cantada conselho fato frase escolher numero eununca vod verdade desafio medidores interacoes level matar calvo burro corno magia maldicao bencao transformar hipnotizar congelar queimar eletrocutar envenenar ressuscitar teletransportar hackear clonar miniaturizar gigantizar assombrar possuir sequestrar forca inteligencia beleza charme aura fofura loucura preguica raiva azar bebida roupa serie anime time pais profissao crime virtude'],
+    ['🎮 JOGOS', 'duelo ppt bau anagrama quiz jogodaforca velha bandeira matematica adedonha charada parar rankjogos'],
+    ['💍 MATRIMÔNIOS', 'casar trair divorciar beijar abracar brigar flores joia ursinho chocolate casais amigosecreto participar sairamigo meuamigo'],
     ['🌐 RANKINGS GLOBAIS', 'topxp toplevel topmsg topladrao toprico topbanco topcasal topsortudo'],
     ['🏰 RANKINGS LOCAIS', 'rank rankxp ranklevel rankmsg rankafk rankfeio rankcasal rankcalvo rankburro rankcorno rankladrao rankbanco ranksortudo'],
   ]],
-  ['𝗚𝗨𝗠𝗕𝗔𝗟𝗟 𝗘𝗫𝗧𝗥𝗔𝗦', [
-    ['🎨 MAIS FIGURINHAS', 's bratanimado bratbranco bratrosa bratpreto bratvinho bratazul redonda togif pacote addpacote limparpacote preso rip desfoque pixel inverter cinza sepia espelho triste brilho contraste'],
-    ['🎉 MAIS BRINCADEIRAS', 'casal sorteio pergunta moeda cantada conselho fato frase escolher numero eununca vod verdade desafio casais amigosecreto participar sairamigo meuamigo level'],
-    ['🧰 MAIS UTILIDADES', 'permitirver bloquearver notasanotar rmnota niver aniversarios baixar playvideo ytsearch moedas converter cep ddd feriados wiki encurtar fazernick tagme wame lembretes lista vou naovou fecharlista parar rankjogos'],
-  ]],
 ];
 export const MENU_ADM = [
-  ['⚙️ GESTÃO DE GRUPO', 'ban del fotogp promoveradm removeradm fechargp limpar abrirgp totag msgbv msgbv2 msgsaiu msgsaiu2 sorteio revogarlink agendafc agendaab mutar desmutar nomegp descgp soadm ativos fantasma adv rmadv advs prefixo aprovar recusar blacklist inativos membros bot bloqcmd desbloqcmd tempocmd modobrincadeira regras setregras agendar agendas rmagenda addresposta rmresposta respostas grupoinfo enquete'],
-  ['🛡️ SEGURANÇA & ANTIS', 'antilink antifoto antiaudio antivideo antisticker antidocumento antiloc anticontato antispam antipalavra antifake antiflood captcha autosticker permlink'],
+  ['🎛️ PAINEL', 'painel config vermodo'],
+  ['⚙️ GESTÃO DE GRUPO', 'ban del fotogp promoveradm removeradm fechargp limpar abrirgp totag msgbv msgbv2 msgsaiu msgsaiu2 sorteio revogarlink agendafc agendaab mutar desmutar mutados nomegp descgp soadm ativos fantasma inativos banghost adv rmadv zeraradv advs maxadv prefixo aprovar recusar solicitacoes blacklist listabranca membros bot botprincipal bloqcmd desbloqcmd tempocmd modobrincadeira regras setregras agendar agendas rmagenda addresposta rmresposta respostas grupoinfo enquete setautor'],
+  ['🛡️ SEGURANÇA & ANTIS', 'antilink permlink antifake permddi antipalavra addpalavra rmpalavra antiflood antispam anti antifoto antiaudio antivideo antisticker antidocumento antiloc anticontato antiapagar antieditar captcha autosticker'],
 ];
 
 function line(name) {

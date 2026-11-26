@@ -6,7 +6,7 @@ import { buildContext, sentIds, invalidateMeta } from './context.js';
 import { registry } from './registry.js';
 import { config } from './config.js';
 import { db } from './db.js';
-import { middlewares, onJoin, onLeave } from './middlewares.js';
+import { middlewares, onJoin, onLeave, onProtocol } from './middlewares.js';
 import { numId } from './lib/text.js';
 import { settings } from './settings.js';
 
@@ -14,7 +14,9 @@ const lastCmdAt = new Map(); // anti-spam por usuario (tempocmd)
 
 export async function handleMessage(sock, m) {
   if (!m.message || m.key.remoteJid === 'status@broadcast') return;
-  if (m.message.protocolMessage || m.message.reactionMessage || m.message.senderKeyDistributionMessage && Object.keys(m.message).length === 1) return;
+  // mensagem apagada/editada: mostra de novo se o grupo ligou essas opcoes
+  if (m.message.protocolMessage || m.message.editedMessage) return onProtocol(sock, m).catch(() => {});
+  if (m.message.reactionMessage || m.message.senderKeyDistributionMessage && Object.keys(m.message).length === 1) return;
   if (sentIds.has(m.key.id)) return; // mensagem que o proprio bot enviou
   if (m.key.fromMe && !config.allowSelf) return;
 

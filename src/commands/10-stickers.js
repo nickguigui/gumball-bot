@@ -1,6 +1,7 @@
 // Figurinhas e edicao de fotos (sharp + ffmpeg, tudo local).
 import sharp from 'sharp';
-import { imageToSticker, videoToSticker, addExif, readExif, stickerToImage, stickerToMp4, textSvg, svgToWebp, svgToPng, framesToAnimatedWebp, esc, wrap } from '../lib/media.js';
+import { imageToSticker, videoToSticker, addExif, readExif, stickerToImage, stickerToMp4, textSvg, svgToWebp, svgToPng, framesToAnimatedWebp, esc, wrap, toOggOpus, isAnimatedWebp, muxAudio } from '../lib/media.js';
+import { attachSound, stickerSound } from '../lib/soundsticker.js';
 import { getBuffer, getJson, http, UserError } from '../lib/http.js';
 import { db } from '../db.js';
 import { config } from '../config.js';
@@ -52,18 +53,36 @@ export const commands = [
       const m = await ctx.media(['imageMessage', 'videoMessage', 'stickerMessage']);
       if (!m) return ctx.reply('🖼️ *Como usar:* envie uma foto/vídeo/GIF com */fig* na legenda, ou responda a mídia com */fig*.');
       const { pack, author } = packOf(ctx);
+      const mudo = /\bmudo\b/i.test(ctx.q);
+      let webp, sound = null, secs = 0;
       if (m.type === 'videoMessage' || m.mimetype.includes('gif')) {
-        if ((m.seconds || 0) > 10) return ctx.reply('⏱️ O vídeo precisa ter até *10 segundos*.');
-        return ctx.sticker(await videoToSticker(m.buffer, 'mp4', { pack, author }));
+        if ((m.seconds || 0) > 30) return ctx.reply('⏱️ O vídeo precisa ter até *30 segundos*.');
+        webp = await videoToSticker(m.buffer, 'mp4', { pack, author });
+        secs = Math.min(8, m.seconds || 8); // o som acompanha a animacao
+        if (!mudo && !m.raw?.gifPlayback) sound = await toOggOpus(m.buffer, 'mp4', secs);
+      } else if (m.type === 'stickerMessage') {
+        webp = await addExif(m.buffer, pack, author);
+        if (!mudo) { const s = await stickerSound(m.raw).catch(() => null); if (s) { sound = s.buffer; secs = s.seconds; } }
+      } else webp = await imageToSticker(m.buffer, { pack, author });
+      // foto mandada respondendo um audio: o audio vira o som da figurinha
+      if (!mudo && !sound && m.type === 'imageMessage' && ctx.quoted?.type === 'audioMessage') {
+        const a = await ctx.media(['audioMessage']).catch(() => null);
+        if (a) { sound = await toOggOpus(a.buffer, a.mimetype.includes('ogg') ? 'ogg' : 'm4a', 30); secs = Math.min(30, a.seconds || 30); }
       }
-      return ctx.sticker(await imageToSticker(m.buffer, { pack, author }));
+      if (sound) await attachSound(ctx.sock, webp, sound, secs);
+      return ctx.sticker(webp);
     },
   },
   { name: 'redonda', category: EXT, react: '⭕', done: '✨', run: async ctx => ctx.sticker(await imageToSticker(await needImage(ctx), { ...packOf(ctx), fit: 'cover', round: true })) },
   {
     name: 'toimg', category: ST, react: '🔄', done: '✅', run: async ctx => {
       const m = await ctx.media(['stickerMessage']); if (!m) return ctx.reply('🔄 Responda uma *figurinha* com /toimg');
-      return ctx.image(await stickerToImage(m.buffer), '🖼️ *Figurinha convertida em imagem!*');
+      const sound = await stickerSound(m.raw).catch(() => null);
+      if (!m.raw?.isAnimated && !isAnimatedWebp(m.buffer) && !sound) return ctx.image(await stickerToImage(m.buffer), '🖼️ *Figurinha convertida em imagem!*');
+      // figurinha animada (ou com som) vira VIDEO, com o som junto
+      let mp4 = await stickerToMp4(m.buffer);
+      if (sound) mp4 = await muxAudio(mp4, sound.buffer);
+      return ctx.video(mp4, sound ? '🎬 *Figurinha convertida em vídeo com som!*' : '🎬 *Figurinha convertida em vídeo!*');
     },
   },
   {
@@ -76,7 +95,10 @@ export const commands = [
     name, category: ST, react: '✏️', done: '✅', run: async ctx => {
       const m = await ctx.media(['stickerMessage']); if (!m) return ctx.reply(`✏️ Responda uma figurinha com */${name} pacote | autor*`);
       const [pack, author] = (ctx.q || config.botName).split('|').map(s => s.trim());
-      return ctx.sticker(await addExif(m.buffer, pack || config.botName, author || ctx.pushName || config.ownerName));
+      const webp = await addExif(m.buffer, pack || config.botName, author || ctx.pushName || config.ownerName);
+      const s = await stickerSound(m.raw).catch(() => null); // renomear sem perder o som
+      if (s) await attachSound(ctx.sock, webp, s.buffer, s.seconds);
+      return ctx.sticker(webp);
     },
   })),
   { name: 'ttp', category: ST, react: '🎨', run: ctx => textSticker(ctx, { fill: '#fff', stroke: '#000', strokeW: 10 }, '🎨 *Uso:* /ttp seu texto') },

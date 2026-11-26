@@ -23,9 +23,22 @@ async function playAudio(ctx) {
 }
 
 // ---------- letras ----------
+// Escolhe o resultado com titulo/artista mais parecido com o que a pessoa digitou
+// ("/lyrics promise laufey" -> Promise, nao Promiscuous)
+const words = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').split(/[^a-z0-9']+/).filter(Boolean);
+export function bestMatch(items, q, title, artist) {
+  const qw = new Set(words(q)); let best = null, bestScore = -Infinity;
+  items.forEach((it, i) => {
+    const tw = words(title(it)), aw = words(artist(it));
+    const hit = tw.filter(w => qw.has(w)).length, miss = tw.length - hit;
+    const score = hit * 3 - miss * 2.5 + aw.filter(w => qw.has(w)).length * 2 + (tw.length && miss === 0 ? 4 : 0) - i * 0.1;
+    if (score > bestScore) { bestScore = score; best = it; }
+  });
+  return best;
+}
 async function deezerIsrc(q) {
-  const s = await getJson(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=1`);
-  const t = s.data?.[0]; if (!t) return null;
+  const s = await getJson(`https://api.deezer.com/search?q=${encodeURIComponent(q.replace(/\s+-\s+/, ' '))}&limit=10`);
+  const t = bestMatch(s.data || [], q, x => x.title, x => x.artist?.name); if (!t) return null;
   const full = await getJson(`https://api.deezer.com/track/${t.id}`);
   return { isrc: full.isrc, title: t.title, artist: t.artist?.name };
 }
@@ -54,12 +67,12 @@ async function lrclib(q) {
   const parts = q.split(/\s+-\s+/);
   const url = parts.length === 2 ? `https://lrclib.net/api/search?artist_name=${encodeURIComponent(parts[0])}&track_name=${encodeURIComponent(parts[1])}` : `https://lrclib.net/api/search?q=${encodeURIComponent(q)}`;
   const j = await getJson(url, { headers: { 'Lrclib-Client': 'gumball-bot' } }).catch(() => []);
-  const hit = j.find(x => x.plainLyrics);
+  const hit = bestMatch(j.filter(x => x.plainLyrics), q, x => x.trackName, x => x.artistName);
   return hit ? { title: hit.trackName, artist: hit.artistName, text: hit.plainLyrics, source: 'LRCLIB' } : null;
 }
 async function genius(q) {
-  const s = await getJson(`https://genius.com/api/search/song?q=${encodeURIComponent(q.replace(/\s+-\s+/, ' '))}&per_page=1`, { timeout: 8000 });
-  const hit = s.response?.sections?.[0]?.hits?.[0]?.result; if (!hit?.url) return null;
+  const s = await getJson(`https://genius.com/api/search/song?q=${encodeURIComponent(q.replace(/\s+-\s+/, ' '))}&per_page=5`, { timeout: 8000 });
+  const hit = bestMatch((s.response?.sections?.[0]?.hits || []).map(h => h.result), q, x => x.title, x => x.primary_artist?.name); if (!hit?.url) return null;
   const html = await (await http(hit.url, { timeout: 10000 })).text();
   const { load } = await import('cheerio'); const $ = load(html);
   $('[data-lyrics-container] br').replaceWith('\n');

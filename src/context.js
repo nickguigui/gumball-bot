@@ -96,7 +96,7 @@ export function buildContext(sock, m) {
       if (!target) return null;
       const t = getContentType(target.message);
       const buffer = await downloadMediaMessage(target, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
-      return { buffer, type: t, mimetype: target.message[t]?.mimetype || '', seconds: target.message[t]?.seconds };
+      return { buffer, type: t, mimetype: target.message[t]?.mimetype || '', seconds: target.message[t]?.seconds, raw: target.message[t] };
     },
     target() { // alvo: mencionado > citado > o proprio autor
       return ctx.mentions[0] || ctx.quoted?.sender || sender;

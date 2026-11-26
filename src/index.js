@@ -1,5 +1,6 @@
 // GUMBALL BOT: um numero de WhatsApp. Roda sozinho (PC/Actions) ou gerenciado pelo
 // servidor (src/manager.js), que conversa com este processo por IPC.
+import './lib/soundsticker.js'; // figurinha com som: precisa entrar antes de qualquer mensagem
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, fetchLatestWaWebVersion, Browsers, jidNormalizedUser } from 'baileys';
 import pino from 'pino';
 import fs from 'node:fs';
@@ -103,6 +104,17 @@ async function connect() {
   return sock;
 }
 
+// Opcoes de grupo que o painel pode mudar (nome -> tipo)
+const GROUP_KEYS = {
+  antilink: 'boolean', antifake: 'boolean', antipalavra: 'boolean', badwords: 'object', antiflood: 'boolean', antispam: 'boolean',
+  antifoto: 'boolean', antiaudio: 'boolean', antivideo: 'boolean', antisticker: 'boolean', antidocumento: 'boolean', antiloc: 'boolean', anticontato: 'boolean',
+  antiapagar: 'boolean', antieditar: 'boolean', captcha: 'boolean', autosticker: 'boolean', welcome: 'boolean', welcomeText: 'string', bye: 'boolean', byeText: 'string',
+  soadm: 'boolean', noFun: 'boolean', tempocmd: 'number', maxadv: 'number', autoOpen: 'string', autoClose: 'string', rules: 'string', prefix: 'string',
+  blockedCmds: 'object', stickerPack: 'string', stickerAuthor: 'string', allowLinks: 'object',
+  viewOnceMode: 'string', linkMode: 'string', banLinks: 'boolean', antiTypes: 'object', allowDDI: 'object', autoreplies: 'object', agendas: 'object', welcomePhoto: 'boolean', byePhoto: 'boolean',
+};
+const pickGroupCfg = s => Object.fromEntries(Object.keys(GROUP_KEYS).filter(k => s[k] !== undefined && s[k] !== null).map(k => [k, s[k]]));
+
 // ---------- comandos do gerenciador (IPC) ----------
 if (MANAGED) {
   process.on('message', async msg => {
@@ -114,6 +126,31 @@ if (MANAGED) {
         tell({ type: 'login-code-sent', id: msg.id });
       }
       if (msg.type === 'reload-settings') await refreshSettings();
+      // Painel: lista os grupos do numero com as configuracoes de cada um
+      if (msg.type === 'groups') {
+        const all = await current.groupFetchAllParticipating();
+        const me = [current.user.id, current.user.lid].filter(Boolean).map(j => jidNormalizedUser(j).split('@')[0]);
+        const list = Object.values(all).map(g => {
+          const d = db.group(g.id);
+          const p = g.participants.find(x => [x.id, x.lid, x.phoneNumber].filter(Boolean).some(j => me.includes(String(j).split('@')[0].split(':')[0])));
+          return { jid: g.id, nome: g.subject, membros: g.participants.length, admin: !!p?.admin, bot: d.bot !== false, cfg: pickGroupCfg(d.settings) };
+        }).sort((a, b) => a.nome.localeCompare(b.nome));
+        tell({ type: 'reply', id: msg.id, data: list });
+      }
+      if (msg.type === 'group-set') {
+        const before = db.group(msg.jid).settings.viewOnceMode || 'optin';
+        const g = db.updateGroup(msg.jid, gr => {
+          if (typeof msg.patch.bot === 'boolean') gr.bot = msg.patch.bot;
+          for (const [k, v] of Object.entries(msg.patch.cfg || {})) if (GROUP_KEYS[k] && typeof v === GROUP_KEYS[k]) gr.settings[k] = v;
+          return gr;
+        });
+        // ligou "todos" na visualizacao unica pelo painel: avisa o grupo (quem nao quiser pode bloquear)
+        if (g.settings.viewOnceMode === 'optout' && before !== 'optout') {
+          const { VO_AVISO } = await import('./commands/45-viewonce.js');
+          await current.sendMessage(msg.jid, { text: VO_AVISO }).catch(() => {});
+        }
+        tell({ type: 'reply', id: msg.id, data: { jid: msg.jid, bot: g.bot !== false, cfg: pickGroupCfg(g.settings) } });
+      }
       if (msg.type === 'logout') { await current?.logout().catch(() => {}); process.exit(4); }
       if (msg.type === 'stop') process.exit(0);
     } catch (e) { tell({ type: 'error', id: msg.id, error: e.message }); }

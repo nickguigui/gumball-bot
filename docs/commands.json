@@ -1,31 +1,48 @@
 {
- "total": 322,
+ "total": 340,
  "categories": [
   {
    "cat": "🤝 SUPORTE DO BOT",
    "cmds": [
     "topcmd",
     "alugar",
-    "teste"
+    "teste",
+    "suporte",
+    "conectar",
+    "bots"
    ]
   },
   {
    "cat": "🎨 FIGURINHAS & STICKERS",
    "cmds": [
     "fig",
+    "s",
     "qc",
     "attp",
     "ttp",
     "textofig",
     "emojimix",
     "toimg",
+    "togif",
     "take",
     "rename",
     "wasted",
     "procurado",
+    "preso",
+    "rip",
     "smeme",
     "brat",
-    "brat2"
+    "brat2",
+    "bratanimado",
+    "bratbranco",
+    "bratrosa",
+    "bratpreto",
+    "bratvinho",
+    "bratazul",
+    "redonda",
+    "pacote",
+    "addpacote",
+    "limparpacote"
    ]
   },
   {
@@ -35,7 +52,16 @@
     "logo",
     "sfundo",
     "placa",
-    "mudarfundo"
+    "mudarfundo",
+    "desfoque",
+    "pixel",
+    "inverter",
+    "cinza",
+    "sepia",
+    "espelho",
+    "triste",
+    "brilho",
+    "contraste"
    ]
   },
   {
@@ -46,6 +72,9 @@
     "play",
     "play2",
     "ytmp4",
+    "playvideo",
+    "ytsearch",
+    "baixar",
     "insta",
     "face",
     "pin",
@@ -67,6 +96,8 @@
    "cmds": [
     "tomp3",
     "voz",
+    "falar",
+    "transcrever",
     "estourar",
     "grave",
     "reverb",
@@ -86,6 +117,8 @@
     "listablock",
     "infogp",
     "dolarhoje",
+    "moedas",
+    "converter",
     "celular",
     "afk",
     "futebol",
@@ -100,9 +133,30 @@
     "clima",
     "ff",
     "lembrete",
+    "lembretes",
     "noticias",
+    "ver",
+    "permitirver",
+    "bloquearver",
     "cinema",
-    "palavras"
+    "palavras",
+    "cep",
+    "ddd",
+    "feriados",
+    "wiki",
+    "encurtar",
+    "fazernick",
+    "tagme",
+    "wame",
+    "notas",
+    "anotar",
+    "rmnota",
+    "niver",
+    "aniversarios",
+    "lista",
+    "vou",
+    "naovou",
+    "fecharlista"
    ]
   },
   {
@@ -137,6 +191,23 @@
     "tapa",
     "ship",
     "chance",
+    "casal",
+    "sorteio",
+    "pergunta",
+    "moeda",
+    "cantada",
+    "conselho",
+    "fato",
+    "frase",
+    "escolher",
+    "numero",
+    "eununca",
+    "vod",
+    "verdade",
+    "desafio",
+    "medidores",
+    "interacoes",
+    "level",
     "matar",
     "calvo",
     "burro",
@@ -193,7 +264,9 @@
     "bandeira",
     "matematica",
     "adedonha",
-    "charada"
+    "charada",
+    "parar",
+    "rankjogos"
    ]
   },
   {
@@ -208,7 +281,12 @@
     "flores",
     "joia",
     "ursinho",
-    "chocolate"
+    "chocolate",
+    "casais",
+    "amigosecreto",
+    "participar",
+    "sairamigo",
+    "meuamigo"
    ]
   },
   {
@@ -243,86 +321,11 @@
    ]
   },
   {
-   "cat": "🎨 MAIS FIGURINHAS",
+   "cat": "🎛️ PAINEL (admin)",
    "cmds": [
-    "s",
-    "bratanimado",
-    "bratbranco",
-    "bratrosa",
-    "bratpreto",
-    "bratvinho",
-    "bratazul",
-    "redonda",
-    "togif",
-    "pacote",
-    "addpacote",
-    "limparpacote",
-    "preso",
-    "rip",
-    "desfoque",
-    "pixel",
-    "inverter",
-    "cinza",
-    "sepia",
-    "espelho",
-    "triste",
-    "brilho",
-    "contraste"
-   ]
-  },
-  {
-   "cat": "🎉 MAIS BRINCADEIRAS",
-   "cmds": [
-    "casal",
-    "sorteio",
-    "pergunta",
-    "moeda",
-    "cantada",
-    "conselho",
-    "fato",
-    "frase",
-    "escolher",
-    "numero",
-    "eununca",
-    "vod",
-    "verdade",
-    "desafio",
-    "casais",
-    "amigosecreto",
-    "participar",
-    "sairamigo",
-    "meuamigo",
-    "level"
-   ]
-  },
-  {
-   "cat": "🧰 MAIS UTILIDADES",
-   "cmds": [
-    "notas",
-    "anotar",
-    "rmnota",
-    "niver",
-    "aniversarios",
-    "baixar",
-    "playvideo",
-    "ytsearch",
-    "moedas",
-    "converter",
-    "cep",
-    "ddd",
-    "feriados",
-    "wiki",
-    "encurtar",
-    "fazernick",
-    "tagme",
-    "wame",
-    "lembretes",
-    "lista",
-    "vou",
-    "naovou",
-    "fecharlista",
-    "parar",
-    "rankjogos"
+    "painel",
+    "config",
+    "vermodo"
    ]
   },
   {
@@ -347,21 +350,28 @@
     "agendaab",
     "mutar",
     "desmutar",
+    "mutados",
     "nomegp",
     "descgp",
     "soadm",
     "ativos",
     "fantasma",
+    "inativos",
+    "banghost",
     "adv",
     "rmadv",
+    "zeraradv",
     "advs",
+    "maxadv",
     "prefixo",
     "aprovar",
     "recusar",
+    "solicitacoes",
     "blacklist",
-    "inativos",
+    "listabranca",
     "membros",
     "bot",
+    "botprincipal",
     "bloqcmd",
     "desbloqcmd",
     "tempocmd",
@@ -375,13 +385,23 @@
     "rmresposta",
     "respostas",
     "grupoinfo",
-    "enquete"
+    "enquete",
+    "setautor"
    ]
   },
   {
    "cat": "🛡️ SEGURANÇA & ANTIS (admin)",
    "cmds": [
     "antilink",
+    "permlink",
+    "antifake",
+    "permddi",
+    "antipalavra",
+    "addpalavra",
+    "rmpalavra",
+    "antiflood",
+    "antispam",
+    "anti",
     "antifoto",
     "antiaudio",
     "antivideo",
@@ -389,13 +409,10 @@
     "antidocumento",
     "antiloc",
     "anticontato",
-    "antispam",
-    "antipalavra",
-    "antifake",
-    "antiflood",
+    "antiapagar",
+    "antieditar",
     "captcha",
-    "autosticker",
-    "permlink"
+    "autosticker"
    ]
   }
  ]
