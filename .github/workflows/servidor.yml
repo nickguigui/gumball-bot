@@ -73,11 +73,22 @@ jobs:
           SRV=$!
 
           # tunel gratis da Cloudflare (sem conta): da um endereco https publico para o site
+          # (os IPs do Actions as vezes levam 429: tenta de novo e, se nao der, usa o localhost.run)
           curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared && chmod +x cloudflared
-          ./cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8787 > tunel.log 2>&1 &
           URL=""
-          for i in $(seq 60); do URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' tunel.log | head -1); [ -n "$URL" ] && break; sleep 1; done
-          [ -z "$URL" ] && { echo "❌ túnel não subiu"; cat tunel.log; exit 1; }
+          for tentativa in 1 2 3 4 5; do
+            ./cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8787 > tunel.log 2>&1 &
+            TUN=$!
+            for i in $(seq 40); do URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' tunel.log | head -1); [ -n "$URL" ] && break; kill -0 $TUN 2>/dev/null || break; sleep 1; done
+            [ -n "$URL" ] && break
+            echo "⚠️ túnel Cloudflare falhou (tentativa $tentativa): $(grep -m1 -oE 'status [0-9]+' tunel.log)"; kill $TUN 2>/dev/null; sleep $((tentativa*15))
+          done
+          if [ -z "$URL" ]; then
+            echo "↪️ usando localhost.run"
+            ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes -R 80:127.0.0.1:8787 nokey@localhost.run -- --output json > tunel2.log 2>&1 &
+            for i in $(seq 40); do URL=$(grep -oE 'https://[a-z0-9.-]+\.(lhr\.life|localhost\.run)' tunel2.log | head -1); [ -n "$URL" ] && break; sleep 1; done
+          fi
+          [ -z "$URL" ] && { echo "❌ nenhum túnel subiu"; cat tunel.log tunel2.log 2>/dev/null | tail -20; exit 1; }
           echo "🌐 servidor em $URL"
           printf '{"url":"%s","desde":%s}\n' "$URL" "$(date +%s000)" > endpoint.json
           publicar endpoint.json "servidor: endereco"
