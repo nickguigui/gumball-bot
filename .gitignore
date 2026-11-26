@@ -1,0 +1,10 @@
+node_modules/
+.env
+auth/
+data/
+data-test/
+*.db
+*.db-*
+qr.png
+secrets.txt
+*.log

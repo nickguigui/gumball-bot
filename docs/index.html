@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gumball Bot</title>
+<meta name="description" content="Bot de WhatsApp grátis para grupos e canais: figurinhas, música, jogos, economia, moderação e canal automático sobre qualquer assunto.">
+<meta name="theme-color" content="#f6fbf3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1511" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23006d3b' d='M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,500&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top" id="top">
+  <a class="brand" href="#inicio" data-tab="inicio"><span class="ms">forum</span>Gumball Bot</a>
+  <nav>
+    <a href="#inicio" data-tab="inicio"><span class="ms">home</span>Início</a>
+    <a href="#comandos" data-tab="comandos"><span class="ms">terminal</span>Comandos</a>
+    <a href="#canal" data-tab="canal"><span class="ms">campaign</span>Canal automático</a>
+    <a href="#conectar" data-tab="conectar"><span class="ms">link</span>Conectar</a>
+  </nav>
+  <span class="spacer"></span>
+  <a class="btn donate" href="https://livepix.gg/nickguigui" target="_blank" rel="noopener"><span class="ms">volunteer_activism</span>Apoiar</a>
+</header>
+
+<main>
+<section id="tab-inicio" class="tab">
+  <div class="hero">
+    <div>
+      <span class="chip"><span class="ms">verified</span>Grátis, sem anúncio e de código aberto</span>
+      <h1>O bot que deixa seu grupo <b>muito</b> mais divertido.</h1>
+      <p class="lead">Figurinhas, músicas, jogos, economia, casamentos, moderação completa e um canal que posta sozinho sobre qualquer assunto. Roda no seu próprio número, de graça, até com o computador desligado.</p>
+      <div class="actions">
+        <a class="btn filled large" href="#conectar" data-tab="conectar"><span class="ms">add_link</span>Colocar no meu número</a>
+        <a class="btn outlined large" href="#canal" data-tab="canal"><span class="ms">campaign</span>Criar canal automático</a>
+      </div>
+      <div class="stats"><div><b id="stat-cmds">300+</b><span>comandos</span></div><div><b>15</b><span>tipos de post no canal</span></div><div><b>R$ 0</b><span>para sempre</span></div></div>
+    </div>
+    <div class="phone" aria-hidden="true">
+      <div class="chat-head"><span class="avatar"><span class="ms">group</span></span><div><b>Melhores amigos</b><small>você, Gumball, +8</small></div></div>
+      <div class="chat" id="demo-chat"></div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Tudo num bot só</h2>
+  <p class="section-sub">Cada categoria tem dezenas de comandos. Veja a lista completa em Comandos.</p>
+  <div class="features">
+    <div class="feature"><span class="ms">add_reaction</span><h3>Figurinhas</h3><p>Foto, vídeo e GIF viram figurinha. Texto animado, brat em 7 cores, emojimix, filtros, WASTED e PROCURADO.</p></div>
+    <div class="feature"><span class="ms">music_note</span><h3>Música e downloads</h3><p>/play baixa a música em segundos. TikTok, Instagram, X e Kwai. Letras buscadas em 5 fontes diferentes.</p></div>
+    <div class="feature"><span class="ms">savings</span><h3>Economia</h3><p>Daily, trabalhos, mineração, pesca, banco com juros, loja, raspadinha, roleta, pix e roubo com escudo.</p></div>
+    <div class="feature"><span class="ms">sports_esports</span><h3>Jogos</h3><p>Anagrama, quiz, forca, velha, bandeiras, adedonha, charada, duelo e o baú misterioso.</p></div>
+    <div class="feature"><span class="ms">celebration</span><h3>Brincadeiras</h3><p>Gadômetro, ship, casal do dia, verdade ou desafio, amigo secreto e dezenas de medidores absurdos.</p></div>
+    <div class="feature"><span class="ms">shield</span><h3>Moderação</h3><p>Antilink, antifake, captcha, advertências, mute, boas-vindas, abrir e fechar no horário.</p></div>
+    <div class="feature"><span class="ms">campaign</span><h3>Canal automático</h3><p>Diga um assunto e ele monta a grade do dia: notícias, quiz, enquetes, curiosidades, música e mais.</p></div>
+    <div class="feature"><span class="ms">alarm</span><h3>Utilidades</h3><p>Lembretes em português ("amanhã às 9h"), clima, cotações, CEP, filmes, notícias, tradutor e IA.</p></div>
+  </div>
+
+  <h2 class="section-title">Perguntas frequentes</h2>
+  <div class="faq">
+    <details><summary>É grátis mesmo?</summary><p>Sim. O bot roda no GitHub Actions da sua própria conta, que é grátis em repositório público. Se quiser ajudar o projeto, use o botão Apoiar. Doar é opcional e de qualquer valor.</p></details>
+    <details><summary>Preciso deixar o computador ou o celular ligado?</summary><p>Não. Depois de conectar, ele roda na nuvem. Só abra o WhatsApp desse número pelo menos a cada 14 dias, senão o WhatsApp desconecta os aparelhos vinculados.</p></details>
+    <details><summary>Ele vai responder em todos os meus grupos?</summary><p>Não. Ele começa desligado em cada grupo. Um admin manda <code>/bot on</code> só onde quiser usar.</p></details>
+    <details><summary>Tem risco de ban?</summary><p>O WhatsApp não tem API oficial para bots de grupo, então ele funciona como um WhatsApp Web. O bot espaça os envios para parecer humano, mas o risco existe. Para risco zero, use um chip secundário.</p></details>
+  </div>
+</section>
+
+<section id="tab-comandos" class="tab" hidden>
+  <h2 class="section-title" style="margin-top:16px">Comandos</h2>
+  <p class="section-sub">Mande no grupo com <code>/</code> na frente. Toque num comando para copiar.</p>
+  <label class="search"><span class="ms">search</span><input id="cmd-search" placeholder="Procurar comando (ex.: fig, play, anagrama)"></label>
+  <div id="cmd-list" class="cmd-grid"></div>
+</section>
+
+<section id="tab-canal" class="tab" hidden>
+  <h2 class="section-title" style="margin-top:16px">Canal automático</h2>
+  <p class="section-sub">Diga o assunto. O site pesquisa na internet, monta a grade do dia inteira com uma prévia de cada post e você aprova. São 15 tipos de post, 40 segundos entre eles, e o conteúdo não se repete.</p>
+  <form id="canal-form" class="form">
+    <label class="field"><input name="topic" required placeholder=" "><span>Assunto do canal (ex.: Taylor Swift, Roblox, Fórmula 1)</span></label>
+    <div class="row">
+      <label class="field"><input name="name" placeholder=" "><span>Nome do canal</span></label>
+      <label class="field"><input name="emoji" value="💜" maxlength="4"><span>Emoji de abertura</span></label>
+      <label class="field"><input name="signature" placeholder=" "><span>Assinatura (ex.: Nick)</span></label>
+    </div>
+    <div class="row">
+      <label class="field"><input name="artist" placeholder=" "><span>Artista ou banda, para a música do dia (opcional)</span></label>
+      <label class="field"><select name="tone"><option>animado, próximo e divertido</option><option>informativo e direto</option><option>fofo e acolhedor</option><option>zoeiro e cheio de memes</option></select><span>Tom dos posts</span></label>
+    </div>
+    <div><button class="btn filled large" type="submit"><span class="ms">travel_explore</span>Pesquisar e montar a grade</button></div>
+  </form>
+  <ul id="canal-progress" class="progress" hidden></ul>
+
+  <div id="canal-result" hidden>
+    <h3 style="font-size:22px;margin-top:24px">Grade do dia: <span id="r-topic"></span></h3>
+    <p class="muted">Mude horários, desligue o que não quiser e confira cada prévia. No canal, os posts são criados na hora, sempre novos e com IA.</p>
+    <ul class="grade" id="grade-body"></ul>
+
+    <div class="approve">
+      <h3>Aprovou?</h3>
+      <p class="muted">Cole o link do seu canal (no canal: ⋮ › Informações do canal › Compartilhar link). O número conectado ao bot precisa ser admin do canal.</p>
+      <label class="field" style="max-width:560px"><input id="ch-invite" placeholder=" "><span>Link do canal (https://whatsapp.com/channel/...)</span></label>
+      <div class="actions" style="margin-top:16px"><button class="btn filled" id="btn-approve"><span class="ms">check</span>Aprovar e gerar configuração</button></div>
+      <div id="approve-out" hidden>
+        <p>Pronto! Esta é a configuração do seu canal:</p>
+        <pre id="cfg-json"></pre>
+        <div class="actions"><button class="btn tonal" id="btn-copy"><span class="ms">content_copy</span>Copiar</button><button class="btn filled" id="btn-github"><span class="ms">rocket_launch</span>Ativar no meu bot</button></div>
+        <p class="muted small">"Ativar no meu bot" salva no <code>channels.json</code> do seu repositório. Ele pede um token do GitHub, que fica só no seu navegador. Sem token, copie e cole no <code>channels.json</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-conectar" class="tab" hidden>
+  <h2 class="section-title" style="margin-top:16px">Coloque o bot no seu número</h2>
+  <p class="section-sub">Grátis, na sua própria conta do GitHub: seus dados não passam por ninguém. Leva uns 5 minutos.</p>
+  <ol class="steps">
+    <li><div><b>Crie sua cópia.</b> Entre no GitHub e clique em <a id="fork-link" href="#" target="_blank" rel="noopener">Fork</a>. Deixe o repositório público, para o Actions ser ilimitado.</div></li>
+    <li><div><b>Gere sua chave secreta.</b> <button class="btn text" id="btn-key"><span class="ms">key</span>Gerar chave</button><br><code id="key-out">clique para gerar</code><br><small class="muted">Ela criptografa sua sessão. Não mostre para ninguém.</small></div></li>
+    <li><div><b>Cadastre os segredos.</b> No seu repositório: Settings › Secrets and variables › Actions › New repository secret.
+      <ul><li><code>STATE_KEY</code>: a chave acima</li><li><code>PAIR_NUMBER</code>: número do bot, só dígitos (ex.: 5561999999999)</li><li><code>OWNER_NUMBERS</code>: seu número, que vira o dono</li></ul></div></li>
+    <li><div><b>Ligue o bot.</b> Aba Actions › Gumball Bot › Run workflow, com <code>pair</code> = <code>sim</code>.</div></li>
+    <li><div><b>Digite o código.</b> No log da execução aparece <code>Código de pareamento: XXXX-XXXX</code>. No celular: WhatsApp › Aparelhos conectados › Conectar com número de telefone.</div></li>
+    <li><div><b>Pronto.</b> Em qualquer grupo, um admin manda <code>/bot on</code> e depois <code>/menu</code>.</div></li>
+  </ol>
+  <div class="banner"><span class="ms">warning</span><div>Não toque em "Sair" no aparelho "Ubuntu" em Aparelhos conectados: é o bot. Abra o WhatsApp desse número pelo menos a cada 14 dias.</div></div>
+</section>
+</main>
+
+<footer>
+  <p>Feito por Nick · <a href="https://livepix.gg/nickguigui" target="_blank" rel="noopener">Apoie no LivePix com o valor que quiser</a></p>
+  <p class="small">Projeto independente, sem ligação com o WhatsApp ou a Meta.</p>
+</footer>
+<script src="app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+name: Gumball Bot
+
+# Roda o bot 24/7 no GitHub Actions: cada execucao dura ~5h40, salva o estado
+# criptografado (state/state.enc) a cada 10 min e no fim dispara a proxima.
+# O cron so religa a corrente se ela cair.
+on:
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+    inputs:
+      pair:
+        description: 'Conectar número novo: "sim" mostra o código de pareamento no log (usa o secret PAIR_NUMBER)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: gumball-bot
+  cancel-in-progress: false
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: ffmpeg + yt-dlp
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu fonts-noto-color-emoji > /dev/null
+          sudo curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp
+
+      - name: Restaurar sessão
+        env:
+          STATE_KEY: ${{ secrets.STATE_KEY }}
+        run: node scripts/state.mjs unpack
+
+      - name: Rodar o bot
+        env:
+          STATE_KEY: ${{ secrets.STATE_KEY }}
+          OWNER_NUMBERS: ${{ secrets.OWNER_NUMBERS }}
+          PAIR_NUMBER: ${{ github.event.inputs.pair == 'sim' && secrets.PAIR_NUMBER || '' }}
+          ALLOW_SELF: 'true'
+          DEFAULT_BOT_ON: ${{ vars.DEFAULT_BOT_ON || 'false' }}
+          BOT_NAME: ${{ vars.BOT_NAME || 'GUMBALL' }}
+          OWNER_NAME: ${{ vars.OWNER_NAME || 'Nick' }}
+          BLOCKED_COMMANDS: ${{ vars.BLOCKED_COMMANDS || 'face' }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          SPICY_LYRICS_KEY: ${{ secrets.SPICY_LYRICS_KEY }}
+          SPICY_LYRICS_ORIGIN: ${{ vars.SPICY_LYRICS_ORIGIN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TENOR_API_KEY: ${{ secrets.TENOR_API_KEY }}
+          REMOVEBG_API_KEY: ${{ secrets.REMOVEBG_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "gumball-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          salvar() {
+            node scripts/state.mjs pack || return 0
+            git add state/state.enc
+            git diff --cached --quiet && return 0
+            git commit -q -m "bot: estado"
+            git pull -q --rebase --autostash -X ours || true
+            git push -q || echo "⚠️ push falhou"
+          }
+          fim=$(( $(date +%s) + 340*60 ))
+          npm start &
+          BOT=$!
+          while kill -0 $BOT 2>/dev/null && [ $(date +%s) -lt $fim ]; do
+            sleep 600
+            salvar
+          done
+          kill -TERM $BOT 2>/dev/null; sleep 5
+          salvar
+          echo "🔁 Disparando a próxima execução"
+          gh workflow run bot.yml --repo "$GITHUB_REPOSITORY" --ref main || echo "⚠️ não consegui disparar a próxima"

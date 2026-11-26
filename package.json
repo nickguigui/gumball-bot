@@ -1,0 +1,25 @@
+{
+  "name": "gumball-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bot de grupos de WhatsApp (Baileys) com menu, economia, jogos, figurinhas, downloads e utilitarios",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning src/index.js",
+    "test": "node --test --no-warnings=ExperimentalWarning test/",
+    "check": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning src/selftest.js"
+  },
+  "dependencies": {
+    "baileys": "^7.0.0-rc14",
+    "cheerio": "^1.1.2",
+    "mathjs": "^15.1.0",
+    "pino": "^9.14.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "sharp": "^0.34.5"
+  }
+}
