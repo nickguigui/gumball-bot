@@ -53,14 +53,14 @@ function start(phone, { pairing = false } = {}) {
     PAIR_NUMBER: pairing ? phone : '', PORT: '', CI: '',
   };
   const child = fork(BOT, [], { env, cwd: path.dirname(path.dirname(BOT)), execArgv: ['--no-warnings=ExperimentalWarning'], stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
-  child.stdout.on('data', b => { const s = b.toString().trim(); if (s) { p.log?.push(`${new Date().toISOString().slice(11, 19)} ${s.slice(0, 300)}`); if (p.log?.length > 60) p.log.shift(); } });
+  child.stdout.on('data', b => { const s = b.toString().trim(); if (s) { p.log?.push(`${new Date().toISOString().slice(11, 19)} ${s.slice(0, 300)}`); if (p.log?.length > 200) p.log.shift(); } });
   const p = { child, state: pairing ? 'pairing' : 'starting', code: null, codeAt: 0, waiters: [], startedAt: Date.now() };
   procs.set(phone, p);
   p.log = [];
   child.stderr.on('data', b => {
     const s = b.toString().trim(); if (!s || /ExperimentalWarning/.test(s)) return;
     console.warn(`[${mask(phone)}] ${s.slice(0, 300)}`);
-    p.log.push(`${new Date().toISOString().slice(11, 19)} ${s.slice(0, 500)}`); if (p.log.length > 60) p.log.shift();
+    p.log.push(`${new Date().toISOString().slice(11, 19)} ${s.slice(0, 500)}`); if (p.log.length > 200) p.log.shift();
   });
   child.on('message', msg => {
     p.log?.push(`${new Date().toISOString().slice(11, 19)} [ipc] ${msg.type}${msg.error ? ': ' + msg.error : ''}`);

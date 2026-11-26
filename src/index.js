@@ -16,7 +16,7 @@ import { db } from './db.js';
 
 const MANAGED = !!process.send; // filho do gerenciador
 const tell = msg => { if (MANAGED) process.send(msg); };
-const logger = pino({ level: process.env.LOG_LEVEL || 'silent' });
+const logger = pino({ level: process.env.LOG_LEVEL || 'error' }, pino.destination(2));
 db.set('startedAt', Date.now());
 
 await loadCommands();
@@ -91,6 +91,11 @@ async function connect() {
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     for (const m of messages) {
+      // diagnostico sem conteudo: tipo, grupo/privado, se e seu, tipos de mensagem, falha de decifrar
+      try {
+        const j = m.key.remoteJid || '';
+        console.log(`[msg] ${type} ${j.endsWith('@g.us') ? 'grupo' : j.endsWith('@newsletter') ? 'canal' : j.endsWith('status@broadcast') ? 'status' : 'privado'} eu=${m.key.fromMe ? 1 : 0} ${Object.keys(m.message || {}).slice(0, 3).join(',') || '-'}${m.messageStubType ? ' stub=' + m.messageStubType + (m.messageStubParameters ? ':' + String(m.messageStubParameters[0]).slice(0, 60) : '') : ''}`);
+      } catch {}
       // O que voce digita no celular pode chegar como 'append' (sincronizacao entre aparelhos).
       // Aceita so se for seu e recente (evita reprocessar historico).
       if (type !== 'notify') {
