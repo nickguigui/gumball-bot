@@ -100,7 +100,7 @@ _${isAdm ? 'A gerência recebeu o bônus de patrulha! 🔥' : 'Seu bônus diári
     },
   })),
   {
-    name: 'banco', category: CAT, react: '🏛️', run: ctx => {
+    name: 'banco', aliases: ['saldo', 'carteira'], category: CAT, react: '🏛️', run: ctx => {
       const u = ctx.user; const gain = applyInterest(u); db.saveUser(u);
       return ctx.reply(`🏛️ *BANCO CENTRAL ${config.botName.toUpperCase()}* 🏛️
 🏢 *Agência:* ${ctx.group ? (ctx.group.settings.name || 'Grupo') : 'Privado'}

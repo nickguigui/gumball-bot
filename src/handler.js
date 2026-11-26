@@ -12,6 +12,20 @@ import { settings } from './settings.js';
 
 const lastCmdAt = new Map(); // anti-spam por usuario (tempocmd)
 
+// Comando mais parecido (distancia de edicao <= 2), para sugerir em erro de digitacao
+function dist(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function closest(name) {
+  let best = null, bd = 3;
+  for (const [n, c] of registry) { if (c.hidden || Math.abs(n.length - name.length) > 2) continue; const k = dist(name, n); if (k < bd) { bd = k; best = c.name; } }
+  return bd <= (name.length <= 4 ? 1 : 2) ? best : null;
+}
+
 export async function handleMessage(sock, m) {
   if (!m.message || m.key.remoteJid === 'status@broadcast') return;
   // mensagem apagada/editada: mostra de novo se o grupo ligou essas opcoes
@@ -36,7 +50,13 @@ export async function handleMessage(sock, m) {
   if (!rawCmd) return;
   const name = rawCmd.toLowerCase();
   const cmd = registry.get(name);
-  if (!cmd) return; // comando desconhecido: silencio total
+  if (!cmd) { // comando desconhecido: silencio, exceto para o dono quando ha um parecido (erro de digitacao)
+    if (config.ownerOnly && ctx.isOwner() && name.length >= 3 && /^[a-zà-ú0-9]+$/.test(name)) {
+      const near = closest(name);
+      if (near) return ctx.reply(`🤔 Não conheço */${name}*. Quis dizer */${near}*?`).catch(() => {});
+    }
+    return;
+  }
   // Modo "so dono": comandos de qualquer outra pessoa sao ignorados em silencio
   if (config.ownerOnly && !ctx.isOwner()) return;
 

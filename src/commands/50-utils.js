@@ -127,7 +127,7 @@ export const commands = [
     },
   },
   {
-    name: 'dolarhoje', aliases: ['moedas'], category: CAT, react: '💵', run: async ctx => {
+    name: 'dolarhoje', aliases: ['moedas', 'cotacao', 'cotação', 'dolar', 'dólar'], category: CAT, react: '💵', run: async ctx => {
       try {
         const j = await getJson('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,BTC-BRL,ARS-BRL');
         const f = (k, e, n) => { const x = j[k]; return `${e} *${n}:* R$ ${Number(x.bid).toLocaleString('pt-BR', { maximumFractionDigits: k.startsWith('BTC') ? 0 : 4 })} _(${Number(x.pctChange) >= 0 ? '📈 +' : '📉 '}${x.pctChange}%)_`; };

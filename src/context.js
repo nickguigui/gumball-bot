@@ -73,6 +73,13 @@ export function buildContext(sock, m) {
     video(buffer, caption = '') { return ctx.send({ video: buffer, caption }, { quoted: m }); },
 
     async meta(fresh) { return isGroup ? groupMeta(sock, jid, fresh) : null; },
+    // Participantes com TODOS os ids (LID e numero): os dados podem estar gravados por qualquer um deles
+    async people() {
+      const meta = await ctx.meta(); if (!meta) return { list: [], all: new Set(), who: () => -1 };
+      const list = meta.participants.map(p => ({ id: p.id, admin: p.admin, ids: [...new Set([p.id, p.lid, p.phoneNumber, p.jid].filter(Boolean).map(j => jidNormalizedUser(j)))] }));
+      const all = new Set(list.flatMap(p => p.ids));
+      return { list, all, who: j => list.findIndex(p => p.ids.includes(jidNormalizedUser(j))) };
+    },
     async isAdmin(who = sender) {
       if (!isGroup) return false;
       const meta = await ctx.meta();

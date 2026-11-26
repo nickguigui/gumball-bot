@@ -1,3 +1,4 @@
+import { jidNormalizedUser } from 'baileys';
 // Matrimonios, rankings globais/locais, amigo secreto, level.
 import { db, levelOf } from '../db.js';
 import { pick, money, dateBR } from '../lib/text.js';
@@ -103,7 +104,7 @@ export const commands = [
   })),
   {
     name: 'casais', category: EXT, react: '💞', run: async ctx => {
-      const ids = new Set((await ctx.meta()).participants.map(p => p.id));
+      const ids = (await ctx.people()).all;
       const seen = new Set(); const pairs = [];
       for (const u of db.allUsers()) if (u.spouse && ids.has(u.jid) && !seen.has(u.jid)) { seen.add(u.jid); seen.add(u.spouse); pairs.push([u.jid, u.spouse, u.marriedAt]); }
       if (!pairs.length) return ctx.reply('💞 Nenhum casal no grupo ainda. Use */casar*!');
@@ -119,7 +120,7 @@ export const commands = [
   },
   {
     name: 'rankcasal', category: LO, react: '💑', run: async ctx => {
-      const ids = new Set((await ctx.meta()).participants.map(p => p.id));
+      const ids = (await ctx.people()).all;
       const pairs = db.allUsers().filter(u => u.spouse && u.marriedAt && ids.has(u.jid) && u.jid < u.spouse).sort((a, b) => a.marriedAt - b.marriedAt).slice(0, 10);
       if (!pairs.length) return ctx.reply('💑 Nenhum casal no grupo.');
       return ctx.reply(`💑 *CASAIS DO GRUPO*\n\n${pairs.map((u, i) => `${medal(i)} ${ctx.tag(u.jid)} + ${ctx.tag(u.spouse)}`).join('\n')}`, { mentions: pairs.flatMap(u => [u.jid, u.spouse]) });
@@ -130,10 +131,19 @@ export const commands = [
   })),
   ...Object.entries(LOCAL).map(([name, [title, src, key, fmt, metric]]) => ({
     name, category: LO, react: '🏰', run: async ctx => {
-      const memberIds = (await ctx.meta()).participants.map(p => p.id);
+      // cada participante pode estar gravado pelo LID ou pelo numero: aceita os dois
+      const parts = (await ctx.meta()).participants.map(p => [p.id, p.lid, p.phoneNumber, p.jid].filter(Boolean).map(j => jidNormalizedUser(j)));
+      const all = new Set(parts.flat());
       let rows;
-      if (src === 'u') rows = memberIds.map(j => ({ ...db.user(j), jid: j }));
-      else rows = db.members(ctx.jid).filter(m => memberIds.includes(m.jid));
+      if (src === 'u') rows = parts.map(vs => vs.map(j => ({ ...db.user(j), jid: j })).sort((a, b) => (key(b) || 0) - (key(a) || 0))[0]);
+      else {
+        const best = new Map(); // junta as entradas da mesma pessoa (LID + numero)
+        for (const m of db.members(ctx.jid).filter(m => all.has(m.jid))) {
+          const who = parts.findIndex(vs => vs.includes(m.jid)); const cur = best.get(who);
+          if (!cur) best.set(who, { ...m }); else { cur.msgs = (cur.msgs || 0) + (m.msgs || 0); cur.lastSeen = Math.max(cur.lastSeen || 0, m.lastSeen || 0); cur.fun = { ...m.fun, ...cur.fun }; }
+        }
+        rows = [...best.values()];
+      }
       if (src === 'f') rows = rows.filter(m => m.fun[metric] != null);
       rows = rows.filter(r => key(r) || key(r) === 0 && src === 'f').sort((a, b) => key(b) - key(a)).slice(0, 10);
       return rankMsg(ctx, title, rows, fmt);

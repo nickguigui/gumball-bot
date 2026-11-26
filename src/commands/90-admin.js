@@ -176,9 +176,9 @@ export const commands = [
   },
   ...[['ativos', 'mais ativos', (a, b) => b.msgs - a.msgs, '🔥'], ['inativos', 'inativos', (a, b) => (a.lastSeen || 0) - (b.lastSeen || 0), '💤'], ['fantasma', 'fantasmas (nunca falaram)', null, '👻']].map(([name, label, sort, emoji]) => ({
     name, category: G, react: emoji, ...A, run: async ctx => {
-      const ids = (await ctx.meta()).participants.map(p => p.id); const days = parseInt(ctx.args[0]) || (name === 'inativos' ? 7 : 0);
+      const { list } = await ctx.people(); const days = parseInt(ctx.args[0]) || (name === 'inativos' ? 7 : 0);
       const mem = Object.fromEntries(db.members(ctx.jid).map(m => [m.jid, m]));
-      let rows = ids.map(j => ({ jid: j, msgs: mem[j]?.msgs || 0, lastSeen: mem[j]?.lastSeen || 0 }));
+      let rows = list.map(p => ({ jid: p.id, msgs: p.ids.reduce((s, j) => s + (mem[j]?.msgs || 0), 0), lastSeen: Math.max(0, ...p.ids.map(j => mem[j]?.lastSeen || 0)) }));
       if (name === 'fantasma') rows = rows.filter(r => !r.msgs);
       else if (name === 'inativos') rows = rows.filter(r => Date.now() - r.lastSeen > days * 864e5).sort(sort);
       else rows = rows.filter(r => r.msgs).sort(sort).slice(0, 15);
@@ -187,9 +187,9 @@ export const commands = [
   })),
   {
     name: 'banghost', category: null, react: '👻', ...A, botAdmin: true, run: async ctx => {
-      const days = parseInt(ctx.args[0]) || 30; const ids = (await ctx.meta()).participants.filter(p => !p.admin).map(p => p.id);
+      const days = parseInt(ctx.args[0]) || 30; const { list } = await ctx.people();
       const mem = Object.fromEntries(db.members(ctx.jid).map(m => [m.jid, m]));
-      const rows = ids.filter(j => Date.now() - (mem[j]?.lastSeen || 0) > days * 864e5);
+      const rows = list.filter(p => !p.admin && Date.now() - Math.max(0, ...p.ids.map(j => mem[j]?.lastSeen || 0)) > days * 864e5).map(p => p.id);
       if (ctx.args.at(-1) !== 'confirmar') return ctx.reply(`👻 *${rows.length}* membros sem falar há +${days} dias.\n\nPara remover: */banghost ${days} confirmar*`);
       for (const j of rows) await ctx.sock.groupParticipantsUpdate(ctx.jid, [j], 'remove').catch(() => {});
       return ctx.reply(`👻 ${rows.length} inativos removidos.`);
