@@ -10,11 +10,12 @@ function apply(obj) { for (const k of Object.keys(DEFAULTS)) if (typeof obj?.[k]
 export async function refreshSettings() {
   try {
     const repo = process.env.GITHUB_REPOSITORY, token = process.env.GH_TOKEN;
-    if (repo && token) {
+    if (repo && token && !process.env.SETTINGS_FILE) {
       const r = await fetch(`https://api.github.com/repos/${repo}/contents/settings.json?ref=main`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.raw+json' }, signal: AbortSignal.timeout(15000) });
       if (r.ok) return apply(await r.json());
     }
-    if (fs.existsSync('settings.json')) apply(JSON.parse(fs.readFileSync('settings.json', 'utf8')));
+    const file = process.env.SETTINGS_FILE || 'settings.json'; // no servidor: um arquivo por numero
+    if (fs.existsSync(file)) apply(JSON.parse(fs.readFileSync(file, 'utf8')));
   } catch (e) { if (process.env.DEBUG) console.warn('settings:', e.message); }
 }
 await refreshSettings();

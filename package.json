@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning src/index.js",
+    "server": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning src/manager.js",
     "test": "node --test --no-warnings=ExperimentalWarning test/",
     "check": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning src/selftest.js"
   },

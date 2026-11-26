@@ -20,7 +20,7 @@
     <a href="#inicio" data-tab="inicio"><span class="ms">home</span>Início</a>
     <a href="#comandos" data-tab="comandos"><span class="ms">terminal</span>Comandos</a>
     <a href="#canal" data-tab="canal"><span class="ms">campaign</span>Canal automático</a>
-    <a href="#conectar" data-tab="conectar"><span class="ms">link</span>Conectar</a>
+    <a href="#conectar" data-tab="conectar"><span class="ms">link</span>Conectar / Painel</a>
   </nav>
   <span class="spacer"></span>
   <a class="btn donate" href="https://livepix.gg/nickguigui" target="_blank" rel="noopener"><span class="ms">volunteer_activism</span>Apoiar</a>
@@ -60,7 +60,7 @@
 
   <h2 class="section-title">Perguntas frequentes</h2>
   <div class="faq">
-    <details><summary>É grátis mesmo?</summary><p>Sim. O bot roda no GitHub Actions da sua própria conta, que é grátis em repositório público. Se quiser ajudar o projeto, use o botão Apoiar. Doar é opcional e de qualquer valor.</p></details>
+    <details><summary>É grátis mesmo?</summary><p>Sim. Você só digita seu número e o código no WhatsApp: não precisa instalar nada nem criar conta. Se quiser ajudar a manter o servidor, use o botão Apoiar, com o valor que quiser.</p></details>
     <details><summary>Preciso deixar o computador ou o celular ligado?</summary><p>Não. Depois de conectar, ele roda na nuvem. Só abra o WhatsApp desse número pelo menos a cada 14 dias, senão o WhatsApp desconecta os aparelhos vinculados.</p></details>
     <details><summary>Outras pessoas conseguem usar o bot no meu número?</summary><p>Não. Só você: o bot obedece apenas às mensagens do seu número, em grupos e no privado. Comando de qualquer outra pessoa é ignorado.</p></details>
     <details><summary>Tem risco de ban?</summary><p>O WhatsApp não tem API oficial para bots de grupo, então ele funciona como um WhatsApp Web. O bot espaça os envios para parecer humano, mas o risco existe. Para risco zero, use um chip secundário.</p></details>
@@ -101,49 +101,79 @@
       <h3>Aprovou?</h3>
       <p class="muted">Cole o link do seu canal (no canal: ⋮ › Informações do canal › Compartilhar link). O número conectado ao bot precisa ser admin do canal.</p>
       <label class="field" style="max-width:560px"><input id="ch-invite" placeholder=" "><span>Link do canal (https://whatsapp.com/channel/...)</span></label>
-      <div class="actions" style="margin-top:16px"><button class="btn filled" id="btn-approve"><span class="ms">check</span>Aprovar e gerar configuração</button></div>
+      <div class="actions" style="margin-top:16px"><button class="btn filled" id="btn-approve"><span class="ms">check</span>Aprovar</button></div>
       <div id="approve-out" hidden>
-        <p>Pronto! Esta é a configuração do seu canal:</p>
-        <pre id="cfg-json"></pre>
-        <div class="actions"><button class="btn tonal" id="btn-copy"><span class="ms">content_copy</span>Copiar</button><button class="btn filled" id="btn-github"><span class="ms">rocket_launch</span>Ativar no meu bot</button></div>
-        <p class="muted small">"Ativar no meu bot" salva no <code>channels.json</code> do seu repositório. Ele pede um token do GitHub, que fica só no seu navegador. Sem token, copie e cole no <code>channels.json</code>.</p>
+        <pre id="cfg-json" hidden></pre><button id="btn-copy" hidden></button>
+        <div class="actions"><button class="btn filled" id="btn-github"><span class="ms">rocket_launch</span>Ativar no meu bot</button></div>
+        <p class="muted small">O canal fica no seu painel, onde dá para remover quando quiser. Precisa estar conectado (aba Conectar / Painel).</p>
       </div>
     </div>
   </div>
 </section>
 
 <section id="tab-conectar" class="tab" hidden>
-  <h2 class="section-title" style="margin-top:16px">Conectar seu número</h2>
-  <p class="section-sub">Digite seu número, toque em Gerar código e digite o código no celular. O bot roda de graça na sua conta do GitHub.</p>
-
-  <form id="pair-form" class="form" style="max-width:560px">
-    <label class="field"><input name="phone" inputmode="tel" autocomplete="tel" required placeholder=" "><span>Seu número com DDD (ex.: 61 99999-9999)</span></label>
-    <details class="advanced" id="pair-adv">
-      <summary>Primeira vez neste navegador</summary>
-      <p class="muted small">O site precisa de permissão para ligar o bot no seu GitHub. Isso é pedido uma vez só e fica salvo apenas neste navegador.</p>
-      <label class="field"><input name="repo" placeholder=" " value="nickguigui/gumball-bot"><span>Seu repositório do bot (usuário/repositório)</span></label>
-      <label class="field"><input name="token" type="password" autocomplete="off" placeholder=" "><span>Token do GitHub</span></label>
-      <p class="small"><a href="https://github.com/settings/tokens/new?scopes=repo,workflow&amp;description=Gumball%20Bot" target="_blank" rel="noopener">Criar o token</a> (marque <code>repo</code> e <code>workflow</code>, já vêm marcados pelo link). Ainda não tem o bot? <a id="fork-link" href="#" target="_blank" rel="noopener">Faça um fork</a> e ative o Actions na aba Actions dele.</p>
-    </details>
-    <div><button class="btn filled large" type="submit"><span class="ms">key</span>Gerar código</button></div>
-  </form>
-
-  <ul id="pair-progress" class="progress" hidden></ul>
-
-  <div id="pair-code" class="pair-code" hidden>
-    <p class="muted">Seu código de conexão</p>
-    <div class="code" id="pair-code-value">XXXX-XXXX</div>
-    <ol class="howto">
-      <li>No celular, abra o WhatsApp do número.</li>
-      <li>Toque em <b>⋮ › Aparelhos conectados › Conectar aparelho</b>.</li>
-      <li>Toque em <b>Conectar com número de telefone</b> e digite o código acima.</li>
-    </ol>
-    <p class="muted small">O código vale uns 2 minutos. Se expirar, um novo aparece aqui sozinho.</p>
+  <!-- passo 1: numero -->
+  <div id="cx-numero">
+    <h2 class="section-title" style="margin-top:16px">Conectar seu número</h2>
+    <p class="section-sub">Digite seu número. Se ele ainda não tiver o bot, mostramos um código para digitar no WhatsApp. Se já tiver, mandamos um código de entrada para a sua conversa "Você".</p>
+    <form id="cx-form" class="form" style="max-width:480px">
+      <label class="field"><input name="telefone" inputmode="tel" autocomplete="tel" required placeholder=" "><span>Seu número com DDD</span></label>
+      <p class="muted small" style="margin:-8px 0 0">Número de fora do Brasil? Digite com o código do país.</p>
+      <div><button class="btn filled large" type="submit"><span class="ms">arrow_forward</span>Continuar</button></div>
+    </form>
+    <p id="cx-erro" class="erro" role="alert" hidden></p>
   </div>
 
-  <div id="pair-done" class="pair-done" hidden>
-    <span class="ms">check_circle</span>
-    <div><b>Conectado!</b><p>Mande <code>/menu</code> em qualquer conversa ou grupo. Só você consegue usar os comandos. Não toque em "Sair" no aparelho "Ubuntu" em Aparelhos conectados: é o bot.</p></div>
+  <!-- passo 2a: parear -->
+  <div id="cx-parear" hidden>
+    <h2 class="section-title" style="margin-top:16px">Digite este código no WhatsApp</h2>
+    <p class="section-sub">Número <b class="cx-num"></b></p>
+    <div class="pair-code"><div class="code" id="cx-code" title="Toque para copiar">XXXX-XXXX</div></div>
+    <ol class="howto">
+      <li>No celular, abra o WhatsApp desse número.</li>
+      <li>Toque em <b>⋮ › Aparelhos conectados › Conectar aparelho</b>.</li>
+      <li>Toque em <b>Conectar com número de telefone</b> e digite o código.</li>
+    </ol>
+    <p class="wait"><span class="ms spin">progress_activity</span>Esperando você digitar o código...</p>
+    <button class="btn text cx-voltar"><span class="ms">arrow_back</span>Usar outro número</button>
+  </div>
+
+  <!-- passo 2b: codigo de entrada -->
+  <div id="cx-entrar" hidden>
+    <h2 class="section-title" style="margin-top:16px">Confira sua conversa "Você"</h2>
+    <p class="section-sub">Mandamos um código de 6 números para a conversa "Você" do número <b class="cx-num"></b>.</p>
+    <form id="cx-login" class="form" style="max-width:360px">
+      <label class="field"><input name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder=" "><span>Código de entrada</span></label>
+      <div><button class="btn filled large" type="submit"><span class="ms">login</span>Entrar no painel</button></div>
+    </form>
+    <p id="cx-erro2" class="erro" role="alert" hidden></p>
+    <button class="btn text cx-voltar"><span class="ms">arrow_back</span>Usar outro número</button>
+  </div>
+
+  <!-- painel -->
+  <div id="painel" hidden>
+    <div class="painel-head">
+      <div><h2 class="section-title" style="margin:16px 0 4px">Seu bot</h2><p class="muted" style="margin:0"><span id="pn-num"></span></p><p style="margin:4px 0 0"><span id="pn-estado" class="estado"></span></p></div>
+      <button class="btn outlined" id="pn-sair"><span class="ms">logout</span>Sair</button>
+    </div>
+
+    <h3 class="painel-sec">Comportamento</h3>
+    <ul class="opcoes">
+      <li><div><b>Responder no privado</b><p>Use os comandos nas conversas privadas, inclusive na conversa "Você". Só você consegue usar.</p></div><input type="checkbox" class="switch" id="pn-privado" aria-label="Responder no privado"></li>
+      <li><div><b>Só você usa o bot</b><p>Comandos de outras pessoas são ignorados, em grupos e no privado.</p></div><span class="ms lock" title="Sempre ligado">lock</span></li>
+    </ul>
+
+    <h3 class="painel-sec">Canais automáticos</h3>
+    <ul class="opcoes" id="pn-canais"></ul>
+    <a class="btn tonal" href="#canal" data-tab="canal"><span class="ms">add</span>Criar canal automático</a>
+
+    <h3 class="painel-sec">Primeiros passos</h3>
+    <p class="muted">Mande <code>/menu</code> em qualquer grupo ou, com "Responder no privado" ligado, na sua conversa "Você".</p>
+
+    <h3 class="painel-sec perigo">Zona de perigo</h3>
+    <ul class="opcoes">
+      <li><div><b>Desconectar o bot</b><p>Remove o bot do seu número e apaga seus dados do servidor.</p></div><button class="btn outlined danger" id="pn-desconectar">Desconectar</button></li>
+    </ul>
   </div>
 </section>
 </main>

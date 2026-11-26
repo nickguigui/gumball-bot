@@ -78,82 +78,70 @@ fetch('commands.json').then(r => r.json()).then(data => {
   $('#cmd-list').addEventListener('click', e => { const b = e.target.closest('.cmd-chip'); if (b) { navigator.clipboard?.writeText(b.textContent); const t = b.textContent; b.textContent = 'copiado'; setTimeout(() => { b.textContent = t; }, 800); } });
 }).catch(() => {});
 
-// ---------- conectar: numero -> codigo na tela ----------
-// Sem servidor: o site usa a API do GitHub com o token da pessoa (salvo so neste navegador),
-// grava o numero como secret criptografado, liga o bot no Actions e le o codigo em pair/code.json.
-$('#fork-link').href = `https://github.com/${REPO}/fork`;
-const pf = $('#pair-form');
-pf.repo.value = store.get('gb-repo') || REPO;
-if (!store.get('gb-token')) $('#pair-adv').open = true;
-function pairStep(text) { const ul = $('#pair-progress'); ul.hidden = false; const li = document.createElement('li'); li.className = 'run'; li.innerHTML = `<span class="ms">progress_activity</span><span>${esc(text)}</span>`; ul.append(li); return li; }
-async function gh(repo, token, path, opts = {}) {
-  const r = await fetch(`https://api.github.com/repos/${repo}${path}`, { ...opts, headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', ...(opts.body ? { 'Content-Type': 'application/json' } : {}) }, cache: 'no-store' });
-  if (r.status === 401) throw new Error('token inválido ou expirado. Crie outro em "Primeira vez neste navegador".');
-  if (r.status === 404 && !opts.allow404) throw new Error('repositório não encontrado ou o token não tem acesso a ele.');
-  return r;
+// ---------- conectar + painel (igual ZueiraBot: sem GitHub, sem conta) ----------
+const API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8787' : 'https://bot.nickguigui.qzz.io';
+let session = store.get('gb-sessao') || '';
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session}` } : {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined })
+    .catch(() => { throw new Error('Não consegui falar com o servidor. Confira sua internet e tente de novo.'); });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401 && path === '/api/painel') { session = ''; store.set('gb-sessao', ''); }
+  if (!r.ok) throw new Error(j.erro || `Erro ${r.status}`);
+  return j;
 }
-async function setSecret(repo, token, name, value, sodium, pk) {
-  const sealed = sodium.crypto_box_seal(sodium.from_string(value), sodium.from_base64(pk.key, sodium.base64_variants.ORIGINAL));
-  const r = await gh(repo, token, `/actions/secrets/${name}`, { method: 'PUT', body: JSON.stringify({ encrypted_value: sodium.to_base64(sealed, sodium.base64_variants.ORIGINAL), key_id: pk.key_id }) });
-  if (!r.ok) throw new Error(`não consegui salvar ${name} (${r.status}). O token precisa de "repo" e "workflow".`);
-}
-async function readPair(repo, token) {
-  const r = await gh(repo, token, `/contents/pair/code.json?ref=main&t=${Date.now()}`, { allow404: true });
-  if (!r.ok) return null;
-  const j = await r.json(); return JSON.parse(atob(j.content.replace(/\n/g, '')));
-}
-pf.addEventListener('submit', async e => {
-  e.preventDefault();
-  let phone = pf.phone.value.replace(/\D/g, '');
-  if (phone.length === 10 || phone.length === 11) phone = '55' + phone; // so DDD + numero: Brasil
-  if (phone.length < 12) { pf.phone.focus(); return; }
-  const repo = pf.repo.value.trim() || REPO, token = pf.token.value.trim() || store.get('gb-token');
-  if (!token) { $('#pair-adv').open = true; pf.token.focus(); return; }
-  store.set('gb-repo', repo); store.set('gb-token', token);
-  const btn = pf.querySelector('button'); btn.disabled = true;
-  $('#pair-progress').innerHTML = ''; $('#pair-code').hidden = true; $('#pair-done').hidden = true;
-  let s;
+const view = id => ['cx-numero', 'cx-parear', 'cx-entrar', 'painel'].forEach(v => { $('#' + v).hidden = v !== id; });
+const showErr = (el, msg) => { $(el).textContent = msg; $(el).hidden = !msg; };
+let ticket = '', pollTimer = null;
+$('#cx-form').addEventListener('submit', async e => {
+  e.preventDefault(); showErr('#cx-erro', '');
+  const btn = e.target.querySelector('button'); btn.disabled = true;
   try {
-    s = pairStep('Salvando seu número com segurança');
-    const sodium = (await import('https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/+esm')).default; await sodium.ready;
-    const pk = await (await gh(repo, token, '/actions/secrets/public-key')).json();
-    const names = (await (await gh(repo, token, '/actions/secrets?per_page=100')).json()).secrets?.map(x => x.name) || [];
-    if (!names.includes('STATE_KEY')) await setSecret(repo, token, 'STATE_KEY', [...crypto.getRandomValues(new Uint8Array(32))].map(x => x.toString(16).padStart(2, '0')).join(''), sodium, pk);
-    await setSecret(repo, token, 'PAIR_NUMBER', phone, sodium, pk);
-    await setSecret(repo, token, 'OWNER_NUMBERS', phone, sodium, pk);
-    done(s, true, 'Número salvo (criptografado)');
-
-    s = pairStep('Ligando o bot no GitHub (leva uns 60 a 90 segundos)');
-    for (const st of ['in_progress', 'queued']) {
-      const runs = (await (await gh(repo, token, `/actions/workflows/bot.yml/runs?status=${st}&per_page=10`)).json()).workflow_runs || [];
-      for (const r of runs) await gh(repo, token, `/actions/runs/${r.id}/cancel`, { method: 'POST' });
-    }
-    const since = Date.now();
-    const d = await gh(repo, token, '/actions/workflows/bot.yml/dispatches', { method: 'POST', body: JSON.stringify({ ref: 'main', inputs: { pair: 'sim' } }) });
-    if (!d.ok) throw new Error(d.status === 404 ? 'o Actions está desligado nesse repositório. Ative na aba Actions dele.' : `não consegui ligar o bot (${d.status}).`);
-
-    let shown = '';
-    for (let i = 0; i < 150; i++) { // ate ~10 min
-      await new Promise(r => setTimeout(r, 4000));
-      const p = await readPair(repo, token).catch(() => null);
-      if (!p || p.at < since - 5000) continue;
-      if (p.status === 'codigo' && p.code !== shown) {
-        if (!shown) done(s, true, 'Bot ligado');
-        shown = p.code; $('#pair-code-value').textContent = p.code; $('#pair-code').hidden = false;
-        $('#pair-code').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      if (p.status === 'conectado') { $('#pair-code').hidden = true; $('#pair-done').hidden = false; if (!shown) done(s, true, 'Bot ligado'); btn.disabled = false; return; }
-      if (p.status === 'erro') throw new Error(`o WhatsApp recusou o pedido de código (${p.error}). Confira o número e tente de novo.`);
-      if (p.status === 'expirado') throw new Error('o tempo para digitar o código acabou. Toque em Gerar código de novo.');
-    }
-    throw new Error('o bot demorou demais para responder. Veja a aba Actions do repositório.');
-  } catch (err) {
-    if (s) done(s, false, 'Não deu certo: ' + err.message);
-    $('#pair-code').hidden = true;
-    if (/token/i.test(err.message)) { store.set('gb-token', ''); $('#pair-adv').open = true; }
-  } finally { btn.disabled = false; }
+    const r = await api('/api/entrar', { method: 'POST', body: { telefone: e.target.telefone.value } });
+    ticket = r.ticket; $$('.cx-num').forEach(el => { el.textContent = r.numero; });
+    if (r.passo === 'parear') { $('#cx-code').textContent = r.codigo; view('cx-parear'); pollPair(); }
+    else { view('cx-entrar'); $('#cx-login').codigo.focus(); }
+  } catch (err) { showErr('#cx-erro', err.message); } finally { btn.disabled = false; }
 });
-$('#pair-code-value').addEventListener('click', () => navigator.clipboard?.writeText($('#pair-code-value').textContent.replace('-', '')));
+function pollPair() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const r = await api('/api/pareamento?ticket=' + ticket);
+      if (r.codigo && r.codigo !== $('#cx-code').textContent) $('#cx-code').textContent = r.codigo; // codigo novo quando o anterior expira
+      if (r.estado === 'conectado') { clearInterval(pollTimer); session = r.token; store.set('gb-sessao', session); openPanel(); }
+      if (r.estado === 'expirado' || r.estado === 'erro') { clearInterval(pollTimer); view('cx-numero'); showErr('#cx-erro', r.estado === 'erro' ? 'O WhatsApp recusou o código. Tente de novo.' : 'O tempo acabou. Toque em Continuar para gerar outro código.'); }
+    } catch {}
+  }, 3000);
+}
+$('#cx-code').addEventListener('click', () => navigator.clipboard?.writeText($('#cx-code').textContent.replace('-', '')));
+$('#cx-login').addEventListener('submit', async e => {
+  e.preventDefault(); showErr('#cx-erro2', '');
+  try { const r = await api('/api/login', { method: 'POST', body: { ticket, codigo: e.target.codigo.value } }); session = r.token; store.set('gb-sessao', session); openPanel(); }
+  catch (err) { showErr('#cx-erro2', err.message); }
+});
+$$('.cx-voltar').forEach(b => b.addEventListener('click', () => { clearInterval(pollTimer); view('cx-numero'); }));
+
+const ESTADOS = { connected: ['Conectado', 'on'], reconnecting: ['Reconectando', ''], starting: ['Ligando', ''], offline: ['Desligado', 'off'], 'logged-out': ['Desconectado no celular', 'off'] };
+async function openPanel() {
+  try {
+    const p = await api('/api/painel'); view('painel');
+    $('#pn-num').textContent = p.nome ? `${p.nome} (${p.numero})` : p.numero;
+    const [txt, cls] = ESTADOS[p.estado] || [p.estado, '']; $('#pn-estado').textContent = txt; $('#pn-estado').className = 'estado ' + cls;
+    $('#pn-privado').checked = !!p.config.privateChats;
+    $('#pn-canais').innerHTML = p.canais.length ? p.canais.map(c => `<li><div><b>${esc(c.emoji || '📰')} ${esc(c.name || c.topic)}</b><p>${esc(c.topic)}${c.invite ? '' : '. Falta o link do canal.'}</p></div><button class="btn text" data-del="${esc(c.id)}">Remover</button></li>`).join('') : '<li><div><p>Nenhum canal ainda. Crie um sobre o assunto que quiser.</p></div></li>';
+  } catch { view('cx-numero'); }
+}
+$('#pn-privado').addEventListener('change', async e => {
+  try { await api('/api/config', { method: 'POST', body: { privateChats: e.target.checked } }); } catch (err) { e.target.checked = !e.target.checked; alert(err.message); }
+});
+$('#pn-canais').addEventListener('click', async e => { const id = e.target.dataset.del; if (id) { await api('/api/canais', { method: 'POST', body: { remover: id } }).catch(err => alert(err.message)); openPanel(); } });
+$('#pn-sair').addEventListener('click', async () => { await api('/api/sair', { method: 'POST' }).catch(() => {}); session = ''; store.set('gb-sessao', ''); view('cx-numero'); });
+$('#pn-desconectar').addEventListener('click', async () => {
+  if (!confirm('Desconectar o bot do seu número e apagar seus dados do servidor? Não dá para desfazer.')) return;
+  await api('/api/desconectar', { method: 'POST' }).catch(err => alert(err.message)); session = ''; store.set('gb-sessao', ''); view('cx-numero');
+});
+if (session) openPanel(); else view('cx-numero');
+
 
 // ---------- gerador de canal ----------
 const SLOTS = [
@@ -294,18 +282,9 @@ $('#btn-approve').addEventListener('click', () => {
 });
 $('#btn-copy').addEventListener('click', () => { navigator.clipboard?.writeText($('#cfg-json').textContent); $('#btn-copy').lastChild.textContent = 'Copiado'; });
 $('#btn-github').addEventListener('click', async () => {
-  const repo = prompt('Seu repositório do bot (usuario/repositorio):', store.get('gb-repo') || REPO); if (!repo) return;
-  const token = store.get('gb-token') || prompt('Token do GitHub com permissão "Contents: write" nesse repositório (fica salvo só neste navegador):'); if (!token) return;
-  store.set('gb-repo', repo); store.set('gb-token', token);
-  const btn = $('#btn-github'); btn.disabled = true;
-  try {
-    const api = `https://api.github.com/repos/${repo}/contents/channels.json`, h = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
-    const cur = await fetch(api, { headers: h }); let sha, data = { channels: [] };
-    if (cur.ok) { const j = await cur.json(); sha = j.sha; data = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(j.content.replace(/\n/g, '')), c => c.charCodeAt(0)))); }
-    const cfg = buildConfig(); data.channels = [...(data.channels || []).filter(c => c.id !== cfg.id), cfg];
-    const bytes = new TextEncoder().encode(JSON.stringify(data, null, 2) + '\n');
-    const r = await fetch(api, { method: 'PUT', headers: h, body: JSON.stringify({ message: `canal: ${cfg.topic}`, content: btoa(String.fromCharCode(...bytes)), sha }) });
-    if (!r.ok) throw new Error((await r.json()).message);
-    btn.lastChild.textContent = 'Ativado! Começa em até 10 min';
-  } catch (err) { btn.disabled = false; if (/credentials|token/i.test(err.message)) store.set('gb-token', ''); alert('Não consegui salvar: ' + err.message); }
+  const btn = $('#btn-github');
+  if (!session) { alert('Entre no painel primeiro (aba Conectar / Painel). Depois volte aqui e toque de novo.'); return; }
+  btn.disabled = true;
+  try { await api('/api/canais', { method: 'POST', body: { canal: buildConfig() } }); btn.lastChild.textContent = 'Ativado! Começa em até 10 minutos'; }
+  catch (err) { btn.disabled = false; alert(err.message); }
 });
