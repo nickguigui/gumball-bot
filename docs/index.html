@@ -62,7 +62,7 @@
   <div class="faq">
     <details><summary>É grátis mesmo?</summary><p>Sim. O bot roda no GitHub Actions da sua própria conta, que é grátis em repositório público. Se quiser ajudar o projeto, use o botão Apoiar. Doar é opcional e de qualquer valor.</p></details>
     <details><summary>Preciso deixar o computador ou o celular ligado?</summary><p>Não. Depois de conectar, ele roda na nuvem. Só abra o WhatsApp desse número pelo menos a cada 14 dias, senão o WhatsApp desconecta os aparelhos vinculados.</p></details>
-    <details><summary>Ele vai responder em todos os meus grupos?</summary><p>Não. Ele começa desligado em cada grupo. Um admin manda <code>/bot on</code> só onde quiser usar.</p></details>
+    <details><summary>Outras pessoas conseguem usar o bot no meu número?</summary><p>Não. Só você: o bot obedece apenas às mensagens do seu número, em grupos e no privado. Comando de qualquer outra pessoa é ignorado.</p></details>
     <details><summary>Tem risco de ban?</summary><p>O WhatsApp não tem API oficial para bots de grupo, então ele funciona como um WhatsApp Web. O bot espaça os envios para parecer humano, mas o risco existe. Para risco zero, use um chip secundário.</p></details>
   </div>
 </section>
@@ -113,18 +113,38 @@
 </section>
 
 <section id="tab-conectar" class="tab" hidden>
-  <h2 class="section-title" style="margin-top:16px">Coloque o bot no seu número</h2>
-  <p class="section-sub">Grátis, na sua própria conta do GitHub: seus dados não passam por ninguém. Leva uns 5 minutos.</p>
-  <ol class="steps">
-    <li><div><b>Crie sua cópia.</b> Entre no GitHub e clique em <a id="fork-link" href="#" target="_blank" rel="noopener">Fork</a>. Deixe o repositório público, para o Actions ser ilimitado.</div></li>
-    <li><div><b>Gere sua chave secreta.</b> <button class="btn text" id="btn-key"><span class="ms">key</span>Gerar chave</button><br><code id="key-out">clique para gerar</code><br><small class="muted">Ela criptografa sua sessão. Não mostre para ninguém.</small></div></li>
-    <li><div><b>Cadastre os segredos.</b> No seu repositório: Settings › Secrets and variables › Actions › New repository secret.
-      <ul><li><code>STATE_KEY</code>: a chave acima</li><li><code>PAIR_NUMBER</code>: número do bot, só dígitos (ex.: 5561999999999)</li><li><code>OWNER_NUMBERS</code>: seu número, que vira o dono</li></ul></div></li>
-    <li><div><b>Ligue o bot.</b> Aba Actions › Gumball Bot › Run workflow, com <code>pair</code> = <code>sim</code>.</div></li>
-    <li><div><b>Digite o código.</b> No log da execução aparece <code>Código de pareamento: XXXX-XXXX</code>. No celular: WhatsApp › Aparelhos conectados › Conectar com número de telefone.</div></li>
-    <li><div><b>Pronto.</b> Em qualquer grupo, um admin manda <code>/bot on</code> e depois <code>/menu</code>.</div></li>
-  </ol>
-  <div class="banner"><span class="ms">warning</span><div>Não toque em "Sair" no aparelho "Ubuntu" em Aparelhos conectados: é o bot. Abra o WhatsApp desse número pelo menos a cada 14 dias.</div></div>
+  <h2 class="section-title" style="margin-top:16px">Conectar seu número</h2>
+  <p class="section-sub">Digite seu número, toque em Gerar código e digite o código no celular. O bot roda de graça na sua conta do GitHub.</p>
+
+  <form id="pair-form" class="form" style="max-width:560px">
+    <label class="field"><input name="phone" inputmode="tel" autocomplete="tel" required placeholder=" "><span>Seu número com DDD (ex.: 61 99999-9999)</span></label>
+    <details class="advanced" id="pair-adv">
+      <summary>Primeira vez neste navegador</summary>
+      <p class="muted small">O site precisa de permissão para ligar o bot no seu GitHub. Isso é pedido uma vez só e fica salvo apenas neste navegador.</p>
+      <label class="field"><input name="repo" placeholder=" " value="nickguigui/gumball-bot"><span>Seu repositório do bot (usuário/repositório)</span></label>
+      <label class="field"><input name="token" type="password" autocomplete="off" placeholder=" "><span>Token do GitHub</span></label>
+      <p class="small"><a href="https://github.com/settings/tokens/new?scopes=repo,workflow&amp;description=Gumball%20Bot" target="_blank" rel="noopener">Criar o token</a> (marque <code>repo</code> e <code>workflow</code>, já vêm marcados pelo link). Ainda não tem o bot? <a id="fork-link" href="#" target="_blank" rel="noopener">Faça um fork</a> e ative o Actions na aba Actions dele.</p>
+    </details>
+    <div><button class="btn filled large" type="submit"><span class="ms">key</span>Gerar código</button></div>
+  </form>
+
+  <ul id="pair-progress" class="progress" hidden></ul>
+
+  <div id="pair-code" class="pair-code" hidden>
+    <p class="muted">Seu código de conexão</p>
+    <div class="code" id="pair-code-value">XXXX-XXXX</div>
+    <ol class="howto">
+      <li>No celular, abra o WhatsApp do número.</li>
+      <li>Toque em <b>⋮ › Aparelhos conectados › Conectar aparelho</b>.</li>
+      <li>Toque em <b>Conectar com número de telefone</b> e digite o código acima.</li>
+    </ol>
+    <p class="muted small">O código vale uns 2 minutos. Se expirar, um novo aparece aqui sozinho.</p>
+  </div>
+
+  <div id="pair-done" class="pair-done" hidden>
+    <span class="ms">check_circle</span>
+    <div><b>Conectado!</b><p>Mande <code>/menu</code> em qualquer conversa ou grupo. Só você consegue usar os comandos. Não toque em "Sair" no aparelho "Ubuntu" em Aparelhos conectados: é o bot.</p></div>
+  </div>
 </section>
 </main>
 

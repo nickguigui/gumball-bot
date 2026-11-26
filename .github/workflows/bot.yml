@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       pair:
-        description: 'Conectar número novo: "sim" mostra o código de pareamento no log (usa o secret PAIR_NUMBER)'
+        description: 'Conectar: "sim" gera o código de pareamento (usa o secret PAIR_NUMBER; o site faz isso sozinho)'
         required: false
         default: ''
 
@@ -35,11 +35,6 @@ jobs:
 
       - run: npm ci --omit=dev --no-audit --no-fund
 
-      - name: ffmpeg + yt-dlp
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu fonts-noto-color-emoji > /dev/null
-          sudo curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp
-
       - name: Restaurar sessão
         env:
           STATE_KEY: ${{ secrets.STATE_KEY }}
@@ -51,7 +46,8 @@ jobs:
           OWNER_NUMBERS: ${{ secrets.OWNER_NUMBERS }}
           PAIR_NUMBER: ${{ github.event.inputs.pair == 'sim' && secrets.PAIR_NUMBER || '' }}
           ALLOW_SELF: 'true'
-          DEFAULT_BOT_ON: ${{ vars.DEFAULT_BOT_ON || 'false' }}
+          OWNER_ONLY: ${{ vars.OWNER_ONLY || 'true' }}
+          DEFAULT_BOT_ON: ${{ vars.DEFAULT_BOT_ON || 'true' }}
           BOT_NAME: ${{ vars.BOT_NAME || 'GUMBALL' }}
           OWNER_NAME: ${{ vars.OWNER_NAME || 'Nick' }}
           BLOCKED_COMMANDS: ${{ vars.BLOCKED_COMMANDS || 'face' }}
@@ -73,11 +69,16 @@ jobs:
             git pull -q --rebase --autostash -X ours || true
             git push -q || echo "⚠️ push falhou"
           }
+          # ffmpeg + yt-dlp instalam em paralelo (o codigo de pareamento sai antes)
+          ( sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu fonts-noto-color-emoji > /dev/null
+            sudo curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp ) &
           fim=$(( $(date +%s) + 340*60 ))
           npm start &
           BOT=$!
+          voltas=0
           while kill -0 $BOT 2>/dev/null && [ $(date +%s) -lt $fim ]; do
-            for i in $(seq 60); do kill -0 $BOT 2>/dev/null || break; sleep 10; done
+            n=60; [ $voltas -eq 0 ] && n=12; voltas=$((voltas+1))   # 1o salvamento em 2 min
+            for i in $(seq $n); do kill -0 $BOT 2>/dev/null || break; sleep 10; done
             salvar
           done
           if ! kill -0 $BOT 2>/dev/null; then

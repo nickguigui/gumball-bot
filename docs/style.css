@@ -160,3 +160,21 @@ footer a{font-weight:500}
   .top{flex-wrap:wrap}.top nav{order:3;width:100%}.brand{margin-right:auto}
   .grade li{grid-template-columns:1fr auto;gap:10px}.grade .when{grid-column:1}.grade .kind{grid-column:1}.grade li>:last-child{grid-row:1;grid-column:2}.grade .preview{grid-column:1/-1}
 }
+
+/* abas com indicador elastico (M3 Expressive: passa do ponto e volta) */
+nav{position:relative;isolation:isolate}
+nav a.on{background:none}
+nav .indicator{position:absolute;z-index:-1;top:0;height:40px;border-radius:20px;background:var(--secondary-container);
+  transition:left .5s cubic-bezier(.34,1.56,.64,1),width .5s cubic-bezier(.34,1.56,.64,1),transform .5s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
+nav .indicator.squish{transform:scaleY(.82)}
+@media (prefers-reduced-motion:reduce){nav .indicator{transition:none}}
+
+/* conectar */
+.advanced{border-top:1px solid var(--outline-var);border-bottom:1px solid var(--outline-var);padding:4px 0}
+.advanced summary{cursor:pointer;padding:12px 4px;font-weight:500;color:var(--on-surface-var)}
+.advanced[open]{display:grid;gap:12px;padding-bottom:16px}
+.pair-code{margin-top:24px;max-width:560px}
+.pair-code .code{font:500 clamp(40px,9vw,64px)/1.1 'Roboto Mono',monospace;letter-spacing:.06em;color:var(--on-primary-container);background:var(--primary-container);border-radius:28px;padding:24px 28px;text-align:center;cursor:pointer;user-select:all}
+.howto{padding-left:20px;margin:20px 0 8px}.howto li{margin:6px 0}
+.pair-done{display:flex;gap:16px;align-items:flex-start;margin-top:24px;max-width:560px;padding:20px 24px;border-radius:28px;background:var(--primary-container);color:var(--on-primary-container)}
+.pair-done .ms{font-size:36px;font-variation-settings:'FILL' 1}.pair-done p{margin:4px 0 0}

@@ -18,7 +18,8 @@ export async function handleMessage(sock, m) {
   if (m.key.fromMe && !config.allowSelf) return;
 
   const ctx = buildContext(sock, m);
-  if (config.groupsOnly && !ctx.isGroup) return;
+  // Modo "so dono" funciona tambem no privado; senao, so grupos (como o Zenitsu)
+  if (config.groupsOnly && !config.ownerOnly && !ctx.isGroup) return;
 
   // Estatisticas e middlewares (antis, afk, mute, autosticker, respostas automaticas)
   if (ctx.isGroup) {
@@ -33,12 +34,16 @@ export async function handleMessage(sock, m) {
   const name = rawCmd.toLowerCase();
   const cmd = registry.get(name);
   if (!cmd) return; // comando desconhecido: silencio total
+  // Modo "so dono": comandos de qualquer outra pessoa sao ignorados em silencio
+  if (config.ownerOnly && !ctx.isOwner()) return;
 
   ctx.cmd = name; ctx.args = args; ctx.q = body.slice(config.prefix.length + rawCmd.length).trim();
   const group = ctx.group;
+  const onlyGroup = '👥 Esse comando só funciona em grupo.';
+  if (!ctx.isGroup && (cmd.admin || cmd.botAdmin || /GESTÃO|ANTIS|RANKINGS LOCAIS/.test(cmd.category || ''))) return ctx.reply(onlyGroup);
 
   // Bot desligado no grupo: so /bot on por admin
-  if (group && group.bot === false && cmd.name !== 'bot') return;
+  if (ctx.isGroup && group.bot === false && cmd.name !== 'bot') return;
   if (group?.settings?.soadm && !(await ctx.isAdmin()) && !ctx.isOwner()) return;
   if (group?.settings?.blockedCmds?.includes(cmd.name)) return ctx.reply(`🚫 O comando */${cmd.name}* está bloqueado neste grupo.`);
   if (group?.settings?.noFun && ['🤡 BRINCADEIRAS', '🎮 JOGOS', '💍 MATRIMÔNIOS'].includes(cmd.category)) return;
@@ -60,6 +65,7 @@ export async function handleMessage(sock, m) {
     if (cmd.done && ok !== false) ctx.react(cmd.done);
   } catch (e) {
     console.error(`/${cmd.name}:`, e);
+    if (!ctx.isGroup && e instanceof TypeError) return ctx.reply(onlyGroup).catch(() => {});
     const msg = e?.userMessage || e?.message || 'Falha desconhecida';
     await ctx.reply(`❌ *Erro:* ${msg}`).catch(() => {});
     ctx.react('⚠️');

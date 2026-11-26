@@ -37,6 +37,13 @@ async function textSticker(ctx, opts, usage) {
   if (!text) throw new UserError(usage);
   return ctx.sticker(await addExif(await svgToWebp(textSvg(text.slice(0, 200), opts)), ...Object.values(packOf(ctx))));
 }
+// Estilo brat: minusculas, Arial Narrow esticada na horizontal, baixa resolucao e borrada
+export async function bratWebp(text, bg, fg) {
+  const svg = textSvg(text, { bg, fill: fg, stroke: 'none', strokeW: 0, font: 'Arial Narrow, Liberation Sans Narrow, Arial, sans-serif', weight: 400, box: 480, base: 170 });
+  const crisp = await sharp(svg).resize(400, 512, { fit: 'fill' }).png().toBuffer(); // estreita e depois estica = letra larga
+  const low = await sharp(crisp).resize(150, 150, { fit: 'fill' }).png().toBuffer();   // perde resolucao
+  return sharp(low).resize(512, 512, { kernel: 'cubic' }).blur(1.2).webp({ quality: 70 }).toBuffer();
+}
 const BRAT = { brat: ['#8ACE00', '#000'], brat2: ['#ffffff', '#000'], bratbranco: ['#ffffff', '#000'], bratrosa: ['#ff9ecf', '#000'], bratpreto: ['#000000', '#fff'], bratvinho: ['#6b1028', '#fff'], bratazul: ['#3b82f6', '#000'] };
 
 export const commands = [
@@ -83,7 +90,11 @@ export const commands = [
     },
   },
   ...Object.entries(BRAT).map(([name, [bg, fg]]) => ({
-    name, category: ['brat', 'brat2'].includes(name) ? ST : EXT, react: '⏳', done: '✅', run: ctx => textSticker(ctx, { bg, fill: fg, stroke: 'none', strokeW: 0, font: 'Arial Narrow, Arial, sans-serif', weight: 500, blur: 1.6, align: 'middle' }, `💚 *Uso:* /${name} seu texto`),
+    name, category: ['brat', 'brat2'].includes(name) ? ST : EXT, react: '⏳', done: '✅', run: async ctx => {
+      const text = (ctx.q || ctx.quoted?.text || '').toLowerCase().slice(0, 120);
+      if (!text) throw new UserError(`💚 *Uso:* /${name} seu texto`);
+      return ctx.sticker(await addExif(await bratWebp(text, bg, fg), ...Object.values(packOf(ctx))));
+    },
   })),
   {
     name: 'bratanimado', category: EXT, react: '⏳', done: '✅', run: async ctx => {

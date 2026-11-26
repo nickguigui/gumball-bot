@@ -9,13 +9,26 @@ const REPO = 'nickguigui/gumball-bot';
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
 // ---------- navegacao ----------
-function show(tab) {
+// Indicador elastico das abas: desliza ate a aba ativa, passa do ponto e volta
+const indicator = document.createElement('span'); indicator.className = 'indicator'; $('nav').prepend(indicator);
+function moveIndicator(animate = true) {
+  const on = $('nav a.on'); if (!on) return;
+  if (!animate) indicator.style.transition = 'none';
+  indicator.style.left = on.offsetLeft + 'px'; indicator.style.width = on.offsetWidth + 'px';
+  if (animate) { indicator.classList.add('squish'); setTimeout(() => indicator.classList.remove('squish'), 160); }
+  else { void indicator.offsetWidth; indicator.style.transition = ''; } // aplica a posicao sem animar e religa a transicao
+  on.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: animate ? 'smooth' : 'auto' });
+}
+addEventListener('resize', () => moveIndicator(false));
+document.fonts?.ready.then(() => moveIndicator(false));
+function show(tab, animate = true) {
   $$('.tab').forEach(t => { t.hidden = t.id !== 'tab-' + tab; });
   $$('nav a').forEach(a => a.classList.toggle('on', a.dataset.tab === tab));
+  moveIndicator(animate);
   window.scrollTo({ top: 0 });
 }
 document.addEventListener('click', e => { const a = e.target.closest('[data-tab]'); if (a) { e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.tab); show(a.dataset.tab); } });
-show(['inicio', 'comandos', 'canal', 'conectar'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio');
+show(['inicio', 'comandos', 'canal', 'conectar'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio', false);
 addEventListener('scroll', () => $('#top').classList.toggle('scrolled', scrollY > 4), { passive: true });
 
 // ---------- playground: cada categoria mostra uma conversa de verdade ----------
@@ -65,9 +78,82 @@ fetch('commands.json').then(r => r.json()).then(data => {
   $('#cmd-list').addEventListener('click', e => { const b = e.target.closest('.cmd-chip'); if (b) { navigator.clipboard?.writeText(b.textContent); const t = b.textContent; b.textContent = 'copiado'; setTimeout(() => { b.textContent = t; }, 800); } });
 }).catch(() => {});
 
-// ---------- conectar ----------
+// ---------- conectar: numero -> codigo na tela ----------
+// Sem servidor: o site usa a API do GitHub com o token da pessoa (salvo so neste navegador),
+// grava o numero como secret criptografado, liga o bot no Actions e le o codigo em pair/code.json.
 $('#fork-link').href = `https://github.com/${REPO}/fork`;
-$('#btn-key').addEventListener('click', () => { $('#key-out').textContent = [...crypto.getRandomValues(new Uint8Array(32))].map(x => x.toString(16).padStart(2, '0')).join(''); });
+const pf = $('#pair-form');
+pf.repo.value = store.get('gb-repo') || REPO;
+if (!store.get('gb-token')) $('#pair-adv').open = true;
+function pairStep(text) { const ul = $('#pair-progress'); ul.hidden = false; const li = document.createElement('li'); li.className = 'run'; li.innerHTML = `<span class="ms">progress_activity</span><span>${esc(text)}</span>`; ul.append(li); return li; }
+async function gh(repo, token, path, opts = {}) {
+  const r = await fetch(`https://api.github.com/repos/${repo}${path}`, { ...opts, headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', ...(opts.body ? { 'Content-Type': 'application/json' } : {}) }, cache: 'no-store' });
+  if (r.status === 401) throw new Error('token inválido ou expirado. Crie outro em "Primeira vez neste navegador".');
+  if (r.status === 404 && !opts.allow404) throw new Error('repositório não encontrado ou o token não tem acesso a ele.');
+  return r;
+}
+async function setSecret(repo, token, name, value, sodium, pk) {
+  const sealed = sodium.crypto_box_seal(sodium.from_string(value), sodium.from_base64(pk.key, sodium.base64_variants.ORIGINAL));
+  const r = await gh(repo, token, `/actions/secrets/${name}`, { method: 'PUT', body: JSON.stringify({ encrypted_value: sodium.to_base64(sealed, sodium.base64_variants.ORIGINAL), key_id: pk.key_id }) });
+  if (!r.ok) throw new Error(`não consegui salvar ${name} (${r.status}). O token precisa de "repo" e "workflow".`);
+}
+async function readPair(repo, token) {
+  const r = await gh(repo, token, `/contents/pair/code.json?ref=main&t=${Date.now()}`, { allow404: true });
+  if (!r.ok) return null;
+  const j = await r.json(); return JSON.parse(atob(j.content.replace(/\n/g, '')));
+}
+pf.addEventListener('submit', async e => {
+  e.preventDefault();
+  let phone = pf.phone.value.replace(/\D/g, '');
+  if (phone.length === 10 || phone.length === 11) phone = '55' + phone; // so DDD + numero: Brasil
+  if (phone.length < 12) { pf.phone.focus(); return; }
+  const repo = pf.repo.value.trim() || REPO, token = pf.token.value.trim() || store.get('gb-token');
+  if (!token) { $('#pair-adv').open = true; pf.token.focus(); return; }
+  store.set('gb-repo', repo); store.set('gb-token', token);
+  const btn = pf.querySelector('button'); btn.disabled = true;
+  $('#pair-progress').innerHTML = ''; $('#pair-code').hidden = true; $('#pair-done').hidden = true;
+  let s;
+  try {
+    s = pairStep('Salvando seu número com segurança');
+    const sodium = (await import('https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/+esm')).default; await sodium.ready;
+    const pk = await (await gh(repo, token, '/actions/secrets/public-key')).json();
+    const names = (await (await gh(repo, token, '/actions/secrets?per_page=100')).json()).secrets?.map(x => x.name) || [];
+    if (!names.includes('STATE_KEY')) await setSecret(repo, token, 'STATE_KEY', [...crypto.getRandomValues(new Uint8Array(32))].map(x => x.toString(16).padStart(2, '0')).join(''), sodium, pk);
+    await setSecret(repo, token, 'PAIR_NUMBER', phone, sodium, pk);
+    await setSecret(repo, token, 'OWNER_NUMBERS', phone, sodium, pk);
+    done(s, true, 'Número salvo (criptografado)');
+
+    s = pairStep('Ligando o bot no GitHub (leva uns 60 a 90 segundos)');
+    for (const st of ['in_progress', 'queued']) {
+      const runs = (await (await gh(repo, token, `/actions/workflows/bot.yml/runs?status=${st}&per_page=10`)).json()).workflow_runs || [];
+      for (const r of runs) await gh(repo, token, `/actions/runs/${r.id}/cancel`, { method: 'POST' });
+    }
+    const since = Date.now();
+    const d = await gh(repo, token, '/actions/workflows/bot.yml/dispatches', { method: 'POST', body: JSON.stringify({ ref: 'main', inputs: { pair: 'sim' } }) });
+    if (!d.ok) throw new Error(d.status === 404 ? 'o Actions está desligado nesse repositório. Ative na aba Actions dele.' : `não consegui ligar o bot (${d.status}).`);
+
+    let shown = '';
+    for (let i = 0; i < 150; i++) { // ate ~10 min
+      await new Promise(r => setTimeout(r, 4000));
+      const p = await readPair(repo, token).catch(() => null);
+      if (!p || p.at < since - 5000) continue;
+      if (p.status === 'codigo' && p.code !== shown) {
+        if (!shown) done(s, true, 'Bot ligado');
+        shown = p.code; $('#pair-code-value').textContent = p.code; $('#pair-code').hidden = false;
+        $('#pair-code').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      if (p.status === 'conectado') { $('#pair-code').hidden = true; $('#pair-done').hidden = false; if (!shown) done(s, true, 'Bot ligado'); btn.disabled = false; return; }
+      if (p.status === 'erro') throw new Error(`o WhatsApp recusou o pedido de código (${p.error}). Confira o número e tente de novo.`);
+      if (p.status === 'expirado') throw new Error('o tempo para digitar o código acabou. Toque em Gerar código de novo.');
+    }
+    throw new Error('o bot demorou demais para responder. Veja a aba Actions do repositório.');
+  } catch (err) {
+    if (s) done(s, false, 'Não deu certo: ' + err.message);
+    $('#pair-code').hidden = true;
+    if (/token/i.test(err.message)) { store.set('gb-token', ''); $('#pair-adv').open = true; }
+  } finally { btn.disabled = false; }
+});
+$('#pair-code-value').addEventListener('click', () => navigator.clipboard?.writeText($('#pair-code-value').textContent.replace('-', '')));
 
 // ---------- gerador de canal ----------
 const SLOTS = [

@@ -71,7 +71,7 @@ export async function addExif(webp, pack = config.botName, author = config.owner
 export function readExif(webp) {
   const c = chunks(webp).find(c => c.id === 'EXIF');
   if (!c) return null;
-  const s = c.data.toString('utf8'); const i = s.indexOf('{');
+  const s = c.data.toString('utf8'); const i = s.indexOf('{"'); // o byte de tamanho pode valer '{'
   try { return JSON.parse(s.slice(i)); } catch { return null; }
 }
 

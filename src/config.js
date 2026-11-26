@@ -18,7 +18,10 @@ export const config = {
   sendJitterMs: int(env.SEND_JITTER_MS, 4000),
   // Responder tambem a comandos enviados pelo proprio numero do bot
   allowSelf: env.ALLOW_SELF === 'true',
-  // So funcionar em grupos (como o Zenitsu)
+  // Modo "so dono": so o seu numero (e OWNER_NUMBERS) usa comandos, em grupos e no privado
+  ownerOnly: env.OWNER_ONLY === 'true',
+  // So funcionar em grupos (como o Zenitsu); ignorado no modo so dono
+  // eslint-disable-next-line
   groupsOnly: env.GROUPS_ONLY !== 'false',
   // Licenca exibida no menu (dias a partir de LICENSE_START, ou vazio = vitalicia)
   licenseUntil: env.LICENSE_UNTIL || '',

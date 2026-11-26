@@ -1,5 +1,5 @@
 // Contexto entregue a cada comando: dados da mensagem + atalhos de resposta.
-import { downloadMediaMessage, getContentType, jidNormalizedUser } from 'baileys';
+import { downloadMediaMessage, getContentType, jidNormalizedUser, generateMessageIDV2 } from 'baileys';
 import { queue, reactNow } from './queue.js';
 import { db } from './db.js';
 import { config } from './config.js';
@@ -54,17 +54,18 @@ export function buildContext(sock, m) {
     cmd: '', args: [], q: '',
     tag: j => '@' + numId(j),
     get user() { return db.user(sender); },
-    get group() { return isGroup ? db.group(jid) : null; },
+    get group() { return db.group(jid); }, // no privado vale como "conversa" (notas, listas, jogos)
 
     // Envia com citacao da mensagem original (padrao do Zenitsu)
     reply(text, opts = {}) {
       const mentions = opts.mentions || extractMentions(text, [sender, ...(ctx.mentions || [])]);
       return ctx.send({ text, mentions }, { quoted: opts.quoted === false ? undefined : m });
     },
+    // O id e gerado e anotado ANTES do envio: o eco da propria mensagem nunca vira comando
     send(content, opts = {}) {
-      return queue.push(() => sock.sendMessage(jid, content, opts.quoted === undefined && opts.noQuote ? {} : opts)).then(rememberSent);
+      return queue.push(() => { const messageId = generateMessageIDV2(sock.user?.id); sentIds.add(messageId); return sock.sendMessage(jid, content, { ...opts, messageId }); }).then(rememberSent);
     },
-    sendTo(to, content, opts = {}) { return queue.push(() => sock.sendMessage(to, content, opts)).then(rememberSent); },
+    sendTo(to, content, opts = {}) { return queue.push(() => { const messageId = generateMessageIDV2(sock.user?.id); sentIds.add(messageId); return sock.sendMessage(to, content, { ...opts, messageId }); }).then(rememberSent); },
     react(emoji) { return emoji ? reactNow(sock, jid, m.key, emoji) : null; },
     sticker(buffer) { return ctx.send({ sticker: buffer }, { quoted: m }); },
     image(buffer, caption = '', mentions) { return ctx.send({ image: buffer, caption, mentions: mentions || extractMentions(caption, [sender]) }, { quoted: m }); },

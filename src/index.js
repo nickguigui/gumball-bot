@@ -36,17 +36,18 @@ async function connect() {
     console.error('❌ Sem sessão do WhatsApp. Rode o workflow com pair = "sim" para conectar.');
     process.exit(3);
   }
-  if (config.pairNumber && !sock.authState.creds.registered) {
-    setTimeout(async () => {
-      try {
-        const code = await sock.requestPairingCode(config.pairNumber);
-        console.log(`\n🔑 Código de pareamento: ${code.match(/.{1,4}/g).join('-')}\n   WhatsApp > Aparelhos conectados > Conectar com número de telefone\n`);
-      } catch (e) { console.error('Falha ao pedir código de pareamento:', e.message); }
-    }, 3000);
-  }
-
+  let pairingAsked = false;
   sock.ev.on('creds.update', saveCreds);
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+    // Pareamento por codigo: pede no primeiro evento de QR (o socket ja esta pronto)
+    if (qr && config.pairNumber && !pairingAsked && !sock.authState.creds.registered) {
+      pairingAsked = true;
+      try {
+        const code = (await sock.requestPairingCode(config.pairNumber)).match(/.{1,4}/g).join('-');
+        console.log(`\n🔑 Código de pareamento: ${code}\n   WhatsApp > Aparelhos conectados > Conectar com número de telefone\n`);
+        publishPair({ status: 'codigo', code, at: Date.now() });
+      } catch (e) { console.error('Falha ao pedir código de pareamento:', e.message); publishPair({ status: 'erro', error: e.message, at: Date.now() }); }
+    }
     if (qr && !config.pairNumber) {
       qrcodeTerminal.generate(qr, { small: true });
       const file = path.join(config.dataDir, 'qr.png');
@@ -55,7 +56,8 @@ async function connect() {
     }
     if (connection === 'open') {
       retry = 0;
-      console.log(`✅ Conectado como ${sock.user?.id} (${sock.user?.name || ''})`);
+      console.log(`✅ Conectado como ${sock.user?.name || 'bot'}`);
+      if (config.pairNumber) publishPair({ status: 'conectado', at: Date.now() });
       startScheduler(sock);
     }
     if (connection === 'close') {
@@ -71,12 +73,39 @@ async function connect() {
   });
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
-    for (const m of messages) handleMessage(sock, m).catch(e => console.error('handler:', e));
+    for (const m of messages) {
+      // O que voce digita no celular pode chegar como 'append' (sincronizacao entre aparelhos).
+      // Aceita so se for seu e recente (evita reprocessar historico).
+      if (type !== 'notify') {
+        const age = Date.now() / 1000 - Number(m.messageTimestamp || 0);
+        if (!(type === 'append' && m.key.fromMe && age < 120)) continue;
+      }
+      handleMessage(sock, m).catch(e => console.error('handler:', e));
+    }
   });
   sock.ev.on('group-participants.update', ev => handleParticipants(sock, ev).catch(e => console.error('participants:', e)));
   return sock;
 }
+
+// Publica o codigo de pareamento/status em pair/code.json para o site mostrar (so no GitHub Actions).
+// O codigo sozinho nao da acesso a nada: ele so funciona se for digitado no celular do numero.
+let pairChain = Promise.resolve();
+function publishPair(data) {
+  if (!process.env.CI) return;
+  pairChain = pairChain.then(async () => {
+    const { execFile } = await import('node:child_process'); const { promisify } = await import('node:util'); const run = promisify(execFile);
+    fs.mkdirSync('pair', { recursive: true });
+    fs.writeFileSync('pair/code.json', JSON.stringify({ ...data, run: process.env.GITHUB_RUN_ID || null }) + '\n');
+    try {
+      await run('git', ['add', 'pair/code.json']);
+      await run('git', ['commit', '-q', '-m', `bot: pareamento ${data.status}`]);
+      await run('git', ['pull', '-q', '--rebase', '--autostash']).catch(() => {});
+      await run('git', ['push', '-q']);
+    } catch (e) { console.warn('⚠️ não consegui publicar o código:', e.message.split('\n')[0]); }
+  });
+}
+// Sem parear em 10 minutos: desiste (nao fica gastando o Actions)
+if (config.pairNumber) setTimeout(() => { if (!fs.existsSync(path.join(config.authDir, 'creds.json')) || !JSON.parse(fs.readFileSync(path.join(config.authDir, 'creds.json'), 'utf8')).registered) { publishPair({ status: 'expirado', at: Date.now() }); setTimeout(() => process.exit(3), 8000); } }, 10 * 60_000);
 
 fs.mkdirSync(config.dataDir, { recursive: true });
 connect();

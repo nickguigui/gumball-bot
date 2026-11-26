@@ -4,11 +4,13 @@ import { queue } from './queue.js';
 import { config } from './config.js';
 import { numId } from './lib/text.js';
 import { tickChannels } from './channels.js';
+import { sentIds } from './context.js';
+import { generateMessageIDV2 } from 'baileys';
 
 let timer = null;
 const localHM = () => new Date().toLocaleTimeString('pt-BR', { timeZone: config.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
 const localDM = () => new Date().toLocaleDateString('pt-BR', { timeZone: config.timezone, day: '2-digit', month: '2-digit' });
-const send = (sock, jid, content) => queue.push(() => sock.sendMessage(jid, content)).catch(e => console.warn('agenda:', e.message));
+const send = (sock, jid, content) => queue.push(() => { const messageId = generateMessageIDV2(sock.user?.id); sentIds.add(messageId); return sock.sendMessage(jid, content, { messageId }); }).catch(e => console.warn('agenda:', e.message));
 
 export function startScheduler(sock) {
   clearInterval(timer);
