@@ -47,7 +47,7 @@ main{max-width:1080px;margin:0 auto;padding:24px 16px 72px}
 
 /* inicio */
 .hero{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:56px;align-items:center;padding:40px 0 64px}
-.hero h1{font-size:clamp(44px,7vw,88px);line-height:1.02;font-weight:900;letter-spacing:-.01em;margin:0 0 24px;color:var(--primary)}
+.hero h1{font-family:'Google Sans Flex','Roboto Flex',system-ui,sans-serif;font-size:clamp(44px,7vw,88px);line-height:.98;font-weight:800;font-variation-settings:'wdth' 118,'opsz' 144;letter-spacing:-.02em;margin:0 0 24px;color:var(--primary)}
 .fine{margin:20px 0 0;color:var(--on-surface-var);font-size:14px}
 .playground{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
 .topics{display:flex;flex-direction:column;gap:8px}
