@@ -18,30 +18,42 @@ document.addEventListener('click', e => { const a = e.target.closest('[data-tab]
 show(['inicio', 'comandos', 'canal', 'conectar'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio');
 addEventListener('scroll', () => $('#top').classList.toggle('scrolled', scrollY > 4), { passive: true });
 
-// ---------- demo ----------
-const DEMO = [
-  ['out', '/play coldplay yellow'], ['in', '🚀 *Pega a pipoca!* Já tô preparando seu som!'], ['in', '🎵 _yellow.mp3_ · 4:26'],
-  ['out', '/gado @Lucas'], ['in', '🐂 *GADÔMETRO*\n👤 @Lucas\n📊 _87%_ `[▰▰▰▰▰▰▰▰▰▱]`\n🌾 _PASTADOR PROFISSIONAL_'],
-  ['out', '/anagrama'], ['in', '🔤 *NOVO ANAGRAMA!*\n👉 *SMONCAROID*\n💡 Aparelho para esquentar refeições'],
-  ['out', '/anagrama microondas'], ['in', '🎉 *VOCÊ ACERTOU!*\n💰 +R$ 98,00 · ⭐ +14 XP'],
-  ['out', '/lembrete amanhã às 7h acordar'], ['in', '⏰ *LEMBRETE AGENDADO!*\n📅 26/11 às 07:00'],
-];
-(async function demo() {
-  const box = $('#demo-chat'); if (!box || matchMedia('(prefers-reduced-motion: reduce)').matches) { if (box) box.innerHTML = DEMO.slice(-4).map(([s, t]) => `<div class="msg ${s}">${wa(t)}</div>`).join(''); return; }
-  for (;;) {
-    box.innerHTML = '';
-    for (const [side, text] of DEMO) {
-      await new Promise(r => setTimeout(r, side === 'out' ? 900 : 1400));
-      const d = document.createElement('div'); d.className = 'msg ' + side; d.innerHTML = (side === 'in' ? '<span class="who">Gumball</span>' : '') + wa(text);
-      box.append(d); while (box.children.length > 7) box.firstChild.remove();
-    }
-    await new Promise(r => setTimeout(r, 3000));
+// ---------- playground: cada categoria mostra uma conversa de verdade ----------
+// ['out', texto] = voce manda; ['in', texto, reacao?] = o bot responde; ['sticker', emoji]
+const DEMOS = {
+  figurinhas: [['out', '📷 foto do Lucas dormindo na aula\n/fig'], ['sticker', '😴'], ['out', '/brat hoje não'], ['sticker', '💚'], ['out', '/emojimix 😂+🔥'], ['sticker', '🥵']],
+  musica: [['out', '/play coldplay yellow'], ['in', '🚀 *Pega a pipoca!* Já tô preparando seu som na qualidade máxima!', '🎵'], ['in', '🎧 _yellow.mp3_  4:26', '✅'], ['out', '/lyrics Queen - Bohemian Rhapsody'], ['in', '🎵 *Bohemian Rhapsody*\n👤 *Artista:* Queen\n\n📝 *Letra:*\n_(a letra completa vem aqui)_', '✅']],
+  jogos: [['out', '/anagrama'], ['in', '🔤 *NOVO ANAGRAMA INICIADO!*\n\n👉 *SMONCAROID*\n💡 *Dica:* Aparelho para esquentar refeições\n⏳ 10 minutos', '🔤'], ['out', '/anagrama geladeira'], ['in', '❌ *Resposta Incorreta!* Tente novamente!'], ['out', '/anagrama microondas'], ['in', '🎉 *PARABÉNS! VOCÊ ACERTOU!*\n💰 *Prêmio:* +R$ 98,00\n⭐ *XP:* +14']],
+  economia: [['out', '/daily'], ['in', '💰 *DAILY COLETADO*\n💵 *Recompensa:* +R$ 165,00\n✨ +24 XP\n💳 *Saldo:* R$ 340,00', '💰'], ['out', '/minerar'], ['in', '⛏️ *MINERAÇÃO*\n🎁 *Encontrou:* 💎 Diamante\n💵 +R$ 250,00', '⛏️'], ['out', '/roubar @Ana'], ['in', '🛡️ @Ana tinha um *Escudo Anti-Roubo*! O roubo falhou.']],
+  zoeira: [['out', '/gado @Lucas'], ['in', '🐂 *GADÔMETRO*\n👤 @Lucas\n📊 _87%_  [▰▰▰▰▰▰▰▰▰▱]\n🌾 *Nível:* _PASTADOR PROFISSIONAL_', '🐂'], ['out', '/ship @Ana @Bia'], ['in', '💘 *SHIP*\n@Ana ❤️ @Bia\n❤️❤️❤️❤️❤️❤️❤️🤍🤍🤍 *73%*\n_Tem química aí! 🔥_', '💘']],
+  moderacao: [['out', 'entra no meu grupo chat.whatsapp.com/xyz'], ['in', '⚠️ @Pedro, *link* não é permitido aqui! Advertência 1/3.'], ['out', '/fechargp 22:00'], ['in', '⏰ O grupo vai *fechar* todo dia às *22:00*.', '🔒'], ['out', '/msgbv'], ['in', '👋 Mensagem de boas-vindas *ativada*!']],
+  utilidades: [['out', '/lembrete amanhã às 7h acordar'], ['in', '⏰ *LEMBRETE AGENDADO!*\n📅 *Disparo:* amanhã às 07:00\n💡 O bot te marca aqui na hora!', '⏰'], ['out', '/clima Brasília'], ['in', '🌍 *BRASÍLIA*\n• *Condição:* Parcialmente nublado ⛅\n• *Temperatura:* 24°C\n• 🌧️ *Chuva hoje:* 70%', '🌍']],
+  canal: [['in', '💜 *_🧠 CURIOSIDADE DO DIA_*\n\nVocê sabia? Em 2025, ela foi nomeada uma das Mulheres do Ano da revista Time.\n\n💜- _Nick_'], ['in', '💜 *_🎮 JOGO DA NOITE: VERDADE OU MENTIRA?_*\n\n_"O primeiro EP saiu em 2023."_\n\n🤫 _A resposta tá escondida no Ler mais_ 👇'], ['in', '💜 *_CANAL OFF‼️_*\n\nBoa noite! Amanhã tem mais 💤']],
+};
+let demoRun = 0;
+async function playDemo(key) {
+  const run = ++demoRun, box = $('#demo-chat'), typing = $('#demo-typing');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+  $$('.topics button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.demo === key)));
+  box.innerHTML = '';
+  for (const [kind, text, react] of DEMOS[key]) {
+    if (run !== demoRun) return;
+    if (kind === 'out') { typing.textContent = text.split('\n').pop(); await wait(700); typing.textContent = 'Mensagem'; }
+    else await wait(900);
+    if (run !== demoRun) return;
+    const d = document.createElement('div');
+    d.className = 'msg ' + (kind === 'out' ? 'out' : kind === 'sticker' ? 'in sticker' : 'in');
+    d.innerHTML = kind === 'sticker' ? esc(text) : (kind === 'in' && key !== 'canal' ? '<span class="who">Gumball</span>' : '') + wa(text) + (react ? `<br><span class="react">${esc(react)}</span>` : '');
+    box.append(d); while (box.children.length > 6) box.firstChild.remove();
   }
-})();
+}
+$$('.topics button').forEach(b => b.addEventListener('click', () => playDemo(b.dataset.demo)));
+if ($('#demo-chat')) playDemo('figurinhas');
 
 // ---------- comandos ----------
 fetch('commands.json').then(r => r.json()).then(data => {
-  $('#stat-cmds').textContent = data.total + '+';
+  $('#stat-cmds').textContent = `${data.total}`;
   const render = q => {
     q = (q || '').toLowerCase().replace(/^\//, '');
     $('#cmd-list').innerHTML = data.categories.map(c => {

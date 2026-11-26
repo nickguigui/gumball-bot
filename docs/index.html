@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#0f1511" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23006d3b' d='M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,500&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wdth,wght@6..144,25..151,400..900&family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,400..900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -29,33 +29,33 @@
 <main>
 <section id="tab-inicio" class="tab">
   <div class="hero">
-    <div>
-      <span class="chip"><span class="ms">verified</span>Grátis, sem anúncio e de código aberto</span>
-      <h1>O bot que deixa seu grupo <b>muito</b> mais divertido.</h1>
-      <p class="lead">Figurinhas, músicas, jogos, economia, casamentos, moderação completa e um canal que posta sozinho sobre qualquer assunto. Roda no seu próprio número, de graça, até com o computador desligado.</p>
+    <div class="hero-copy">
+      <h1>Seu grupo pede, o bot faz.</h1>
+      <p class="lead">Figurinhas, músicas, jogos, economia, moderação e um canal que posta sozinho sobre qualquer assunto. Grátis, no seu próprio número, mesmo com o computador desligado.</p>
       <div class="actions">
         <a class="btn filled large" href="#conectar" data-tab="conectar"><span class="ms">add_link</span>Colocar no meu número</a>
-        <a class="btn outlined large" href="#canal" data-tab="canal"><span class="ms">campaign</span>Criar canal automático</a>
+        <a class="btn tonal large" href="#canal" data-tab="canal"><span class="ms">campaign</span>Criar canal automático</a>
       </div>
-      <div class="stats"><div><b id="stat-cmds">300+</b><span>comandos</span></div><div><b>15</b><span>tipos de post no canal</span></div><div><b>R$ 0</b><span>para sempre</span></div></div>
+      <p class="fine">Sem anúncio e com código aberto. <span id="stat-cmds">Mais de 300</span> comandos.</p>
     </div>
-    <div class="phone" aria-hidden="true">
-      <div class="chat-head"><span class="avatar"><span class="ms">group</span></span><div><b>Melhores amigos</b><small>você, Gumball, +8</small></div></div>
-      <div class="chat" id="demo-chat"></div>
-    </div>
-  </div>
 
-  <h2 class="section-title">Tudo num bot só</h2>
-  <p class="section-sub">Cada categoria tem dezenas de comandos. Veja a lista completa em Comandos.</p>
-  <div class="features">
-    <div class="feature"><span class="ms">add_reaction</span><h3>Figurinhas</h3><p>Foto, vídeo e GIF viram figurinha. Texto animado, brat em 7 cores, emojimix, filtros, WASTED e PROCURADO.</p></div>
-    <div class="feature"><span class="ms">music_note</span><h3>Música e downloads</h3><p>/play baixa a música em segundos. TikTok, Instagram, X e Kwai. Letras buscadas em 5 fontes diferentes.</p></div>
-    <div class="feature"><span class="ms">savings</span><h3>Economia</h3><p>Daily, trabalhos, mineração, pesca, banco com juros, loja, raspadinha, roleta, pix e roubo com escudo.</p></div>
-    <div class="feature"><span class="ms">sports_esports</span><h3>Jogos</h3><p>Anagrama, quiz, forca, velha, bandeiras, adedonha, charada, duelo e o baú misterioso.</p></div>
-    <div class="feature"><span class="ms">celebration</span><h3>Brincadeiras</h3><p>Gadômetro, ship, casal do dia, verdade ou desafio, amigo secreto e dezenas de medidores absurdos.</p></div>
-    <div class="feature"><span class="ms">shield</span><h3>Moderação</h3><p>Antilink, antifake, captcha, advertências, mute, boas-vindas, abrir e fechar no horário.</p></div>
-    <div class="feature"><span class="ms">campaign</span><h3>Canal automático</h3><p>Diga um assunto e ele monta a grade do dia: notícias, quiz, enquetes, curiosidades, música e mais.</p></div>
-    <div class="feature"><span class="ms">alarm</span><h3>Utilidades</h3><p>Lembretes em português ("amanhã às 9h"), clima, cotações, CEP, filmes, notícias, tradutor e IA.</p></div>
+    <div class="playground">
+      <div class="phone">
+        <div class="chat-head"><span class="avatar"><span class="ms">group</span></span><div><b>Melhores amigos</b><small>você, Gumball e mais 8</small></div></div>
+        <div class="chat" id="demo-chat" aria-live="polite"></div>
+        <div class="composer"><span class="ms">add</span><span class="typing" id="demo-typing">Toque numa categoria</span><span class="ms send">send</span></div>
+      </div>
+      <div class="topics" role="tablist" aria-label="Ver o bot em ação">
+        <button role="tab" data-demo="figurinhas"><span class="ms">add_reaction</span>Figurinhas</button>
+        <button role="tab" data-demo="musica"><span class="ms">music_note</span>Música</button>
+        <button role="tab" data-demo="jogos"><span class="ms">sports_esports</span>Jogos</button>
+        <button role="tab" data-demo="economia"><span class="ms">savings</span>Economia</button>
+        <button role="tab" data-demo="zoeira"><span class="ms">celebration</span>Brincadeiras</button>
+        <button role="tab" data-demo="moderacao"><span class="ms">shield</span>Moderação</button>
+        <button role="tab" data-demo="utilidades"><span class="ms">alarm</span>Utilidades</button>
+        <button role="tab" data-demo="canal"><span class="ms">campaign</span>Canal</button>
+      </div>
+    </div>
   </div>
 
   <h2 class="section-title">Perguntas frequentes</h2>
@@ -129,7 +129,7 @@
 </main>
 
 <footer>
-  <p>Feito por Nick · <a href="https://livepix.gg/nickguigui" target="_blank" rel="noopener">Apoie no LivePix com o valor que quiser</a></p>
+  <p>Feito por Nick. Gostou? <a href="https://livepix.gg/nickguigui" target="_blank" rel="noopener">Apoie no LivePix com o valor que quiser</a>.</p>
   <p class="small">Projeto independente, sem ligação com o WhatsApp ou a Meta.</p>
 </footer>
 <script src="app.js" type="module"></script>
