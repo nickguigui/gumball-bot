@@ -23,6 +23,7 @@ const procs = new Map();   // phone -> { child, state, code, codeAt, waiters:[] 
 const logins = new Map();  // phone -> { code, until, tries }
 const tickets = new Map(); // ticket -> { phone, until }
 const hits = new Map();    // chave de rate limit -> [timestamps]
+const dead = new Map();    // phone -> ultimo log de um processo que saiu
 const dir = phone => path.join(ROOT, phone);
 
 function limited(key, max, windowMs) {
@@ -51,7 +52,8 @@ function start(phone, { pairing = false } = {}) {
     OWNER_NUMBERS: phone, OWNER_ONLY: 'true', ALLOW_SELF: 'true', DEFAULT_BOT_ON: 'true',
     PAIR_NUMBER: pairing ? phone : '', PORT: '', CI: '',
   };
-  const child = fork(BOT, [], { env, cwd: path.dirname(path.dirname(BOT)), stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
+  const child = fork(BOT, [], { env, cwd: path.dirname(path.dirname(BOT)), execArgv: ['--no-warnings=ExperimentalWarning'], stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+  child.stdout.on('data', b => { const s = b.toString().trim(); if (s) { p.log?.push(`${new Date().toISOString().slice(11, 19)} ${s.slice(0, 300)}`); if (p.log?.length > 60) p.log.shift(); } });
   const p = { child, state: pairing ? 'pairing' : 'starting', code: null, codeAt: 0, waiters: [], startedAt: Date.now() };
   procs.set(phone, p);
   p.log = [];
@@ -73,6 +75,8 @@ function start(phone, { pairing = false } = {}) {
     for (const w of p.waiters.splice(0)) w(msg);
   });
   child.on('exit', code => {
+    p.log.push(`${new Date().toISOString().slice(11, 19)} [saiu] código ${code}`);
+    dead.set(phone, { at: Date.now(), code, log: p.log.slice(-40) }); // para o diagnostico
     const wasConnected = isRegistered(phone);
     if (procs.get(phone) === p) procs.delete(phone);
     if (code === 4) { // desconectado no celular ou pelo painel: apaga tudo desse numero
@@ -114,7 +118,7 @@ const routes = {
     const k = url.searchParams.get('k') || '';
     if (!process.env.ADMIN_KEY || k.length !== process.env.ADMIN_KEY.length || !crypto.timingSafeEqual(Buffer.from(k), Buffer.from(process.env.ADMIN_KEY))) return [404, { erro: 'Não encontrado' }];
     const phone = normPhone(url.searchParams.get('tel')); const p = phone && procs.get(phone);
-    return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null }];
+    return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null, morto: phone ? dead.get(phone) || null : null }];
   },
   'GET /api/saude': async () => [200, { ok: true, numeros: Object.keys(reg.tenants).length, online: [...procs.values()].filter(p => p.state === 'connected').length }],
 
