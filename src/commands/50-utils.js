@@ -61,6 +61,32 @@ const FONTS = [boldSans, s => [...s].map(c => { const n = c.codePointAt(0); retu
   s => [...s.toLowerCase()].map(c => 'ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ'['abcdefghijklmnopqrstuvwxyz'.indexOf(c)] || c).join(''),
   s => [...s].map(c => c + '\u0336').join(''), s => [...s.toLowerCase()].map(c => 'ɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇnʌʍxʎz'['abcdefghijklmnopqrstuvwxyz'.indexOf(c)] || c).reverse().join('')];
 
+// football-data.org: proximos jogos (e ao vivo) de uma liga ou dos principais campeonatos
+const LIGAS = { brasileirao: 'BSA', brasil: 'BSA', bsa: 'BSA', premier: 'PL', pl: 'PL', champions: 'CL', cl: 'CL', laliga: 'PD', pd: 'PD', bundesliga: 'BL1', bl1: 'BL1', seriea: 'SA', italiano: 'SA', ligue1: 'FL1', frances: 'FL1', portugues: 'PPL', ppl: 'PPL', libertadores: 'CLI', copa: 'WC' };
+const LIGA_NOME = { BSA: '🇧🇷 BRASILEIRÃO', PL: '🏴 PREMIER LEAGUE', CL: '⭐ CHAMPIONS LEAGUE', PD: '🇪🇸 LA LIGA', BL1: '🇩🇪 BUNDESLIGA', SA: '🇮🇹 SERIE A', FL1: '🇫🇷 LIGUE 1', PPL: '🇵🇹 LIGA PORTUGAL', CLI: '🏆 LIBERTADORES', WC: '🌍 COPA DO MUNDO', ELC: '🏴 CHAMPIONSHIP', DED: '🇳🇱 EREDIVISIE', EC: '🇪🇺 EUROCOPA' };
+async function footballData(q) {
+  const code = LIGAS[normalize(q).replace(/\s+/g, '')];
+  const H = { headers: { 'X-Auth-Token': config.footballKey } };
+  let matches;
+  if (code) matches = (await getJson(`https://api.football-data.org/v4/competitions/${code}/matches?status=SCHEDULED,TIMED,IN_PLAY,PAUSED`, H)).matches;
+  else {
+    const d = new Date(), to = new Date(Date.now() + 6 * 864e5), f = x => x.toISOString().slice(0, 10);
+    matches = (await getJson(`https://api.football-data.org/v4/matches?dateFrom=${f(d)}&dateTo=${f(to)}`, H)).matches;
+  }
+  matches = (matches || []).filter(m => m.status !== 'FINISHED');
+  if (!matches.length) return code ? `⚽ Nenhum jogo agendado agora em *${LIGA_NOME[code] || code}*.` : null;
+  const by = {};
+  for (const m of matches) (by[m.competition?.code || code] ||= []).push(m);
+  const order = ['BSA', 'CLI', 'CL', 'PL', 'PD', 'SA', 'BL1', 'FL1', 'PPL'];
+  const nums = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣'];
+  const blocks = Object.keys(by).sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99)).slice(0, code ? 1 : 3).map(c => `🏆 *${LIGA_NOME[c] || by[c][0].competition?.name}*\n${by[c].slice(0, 8).map((m, i) => {
+    const when = new Date(m.utcDate).toLocaleString('pt-BR', { timeZone: config.timezone, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const live = ['IN_PLAY', 'PAUSED'].includes(m.status) ? ` 🔴 ${m.score?.fullTime?.home ?? 0}x${m.score?.fullTime?.away ?? 0}` : '';
+    return `  ${nums[i]}  _${when}_ ➔ *${m.homeTeam.shortName || m.homeTeam.name}* x *${m.awayTeam.shortName || m.awayTeam.name}*${live}`;
+  }).join('\n')}`);
+  return `📅 *${code ? `PRÓXIMOS JOGOS: ${LIGA_NOME[code] || code}` : 'PRÓXIMOS JOGOS DE DESTAQUE'}*\n_Fonte: football-data.org • escolha a liga: /futebol brasileirao, champions, premier, laliga..._\n\n───────────────────────\n\n${blocks.join('\n\n')}`;
+}
+
 export const commands = [
   {
     name: 'gpt', category: CAT, react: '🧠', done: '✅', run: async ctx => {
@@ -150,6 +176,8 @@ export const commands = [
   },
   {
     name: 'futebol', category: CAT, react: '⚽', done: '✅', run: async ctx => {
+      // 1) football-data.org (chave do Gumball antigo); 2) ESPN gratis como reserva
+      if (config.footballKey) { const r = await footballData(ctx.q).catch(() => null); if (r) return ctx.reply(r); }
       const leagues = [['bra.1', '🇧🇷 BRASILEIRÃO'], ['conmebol.libertadores', '🏆 LIBERTADORES'], ['uefa.champions', '⭐ CHAMPIONS LEAGUE'], ['uefa.europa', '🏆 UEFA EUROPA LEAGUE'], ['eng.1', '🏴 PREMIER LEAGUE'], ['esp.1', '🇪🇸 LA LIGA']];
       const blocks = [];
       for (const [code, name] of leagues) {
@@ -194,6 +222,23 @@ export const commands = [
   },
   {
     name: 'noticias', category: CAT, react: '📰', done: '✅', run: async ctx => {
+      // 1) GNews (aceita assunto: /noticias Laufey); 2) G1 gratis como reserva
+      if (config.gnewsKey) {
+        const url = ctx.q ? `https://gnews.io/api/v4/search?q=${encodeURIComponent(ctx.q)}&lang=pt&country=br&max=8&apikey=${config.gnewsKey}` : `https://gnews.io/api/v4/top-headlines?lang=pt&country=br&max=8&apikey=${config.gnewsKey}`;
+        // plano gratis: 1 pedido por segundo; se recusar, espera e tenta de novo
+        let j = await getJson(url).catch(() => null);
+        if (!j?.articles) { await new Promise(r => setTimeout(r, 1500)); j = await getJson(url).catch(() => null); }
+        if (j?.articles?.length) {
+          const items = j.articles.map((a, i) => `*${i + 1}.* ${a.title}\n📰 _${a.source?.name || ''}_\n🔗 ${a.url}`);
+          return ctx.reply(`╭━━━━━━━━━━━━━━━━━━━━━━━━╮\n┃   📰 ${ctx.q ? 'NOTÍCIAS: ' + ctx.q.toUpperCase().slice(0, 14) : 'ÚLTIMAS NOTÍCIAS'}   ┃\n╰━━━━━━━━━━━━━━━━━━━━━━━━╯\n\n${items.join('\n\n')}`);
+        }
+        if (ctx.q && j?.articles) return ctx.reply(`📰 Nenhuma notícia recente sobre *${ctx.q}*.`);
+      }
+      if (ctx.q) { // com assunto e sem GNews: busca no Google Noticias (nunca mostra manchete de outro assunto)
+        const $g = cheerio.load(await getText(`https://news.google.com/rss/search?q=${encodeURIComponent(ctx.q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`), { xmlMode: true });
+        const it = $g('item').slice(0, 8).map((i, el) => `*${i + 1}.* ${$g(el).find('title').first().text().trim()}\n🔗 ${$g(el).find('link').first().text().trim()}`).get();
+        return ctx.reply(it.length ? `╭━━━━━━━━━━━━━━━━━━━━━━━━╮\n┃   📰 NOTÍCIAS: ${ctx.q.toUpperCase().slice(0, 14)}   ┃\n╰━━━━━━━━━━━━━━━━━━━━━━━━╯\n\n${it.join('\n\n')}` : `📰 Nenhuma notícia recente sobre *${ctx.q}*.`);
+      }
       const xml = await getText('https://g1.globo.com/rss/g1/');
       const $ = cheerio.load(xml, { xmlMode: true });
       const items = $('item').slice(0, 8).map((i, el) => `*${i + 1}.* ${$(el).find('title').first().text().trim()}\n🔗 ${$(el).find('link').first().text().trim()}`).get();

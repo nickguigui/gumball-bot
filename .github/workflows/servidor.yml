@@ -50,6 +50,8 @@ jobs:
           OWNER_NAME: ${{ vars.OWNER_NAME || 'Nick' }}
           BLOCKED_COMMANDS: ${{ vars.BLOCKED_COMMANDS || 'face' }}
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+          GNEWS_API_KEY: ${{ secrets.GNEWS_API_KEY }}
           SPICY_LYRICS_KEY: ${{ secrets.SPICY_LYRICS_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || vars.OPENAI_BASE_URL }}

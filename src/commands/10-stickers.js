@@ -39,6 +39,18 @@ async function textSticker(ctx, opts, usage) {
   if (!text) throw new UserError(usage);
   return ctx.sticker(await addExif(await svgToWebp(textSvg(text.slice(0, 200), opts)), ...Object.values(packOf(ctx))));
 }
+// Emoji Kitchen SEM chave: as misturas ficam em gstatic.com/android/keyboard/emojikitchen/<data>/<emoji1>/<emoji1>_<emoji2>.png.
+// Testa as datas em que o Google publicou cada leva (nas duas ordens) ate achar a figurinha.
+const EK_DATES = ['20201001', '20210218', '20210521', '20210831', '20211115', '20220110', '20220203', '20220406', '20220506', '20220815', '20220823', '20221101', '20221107', '20230126', '20230127', '20230216', '20230221', '20230301', '20230405', '20230418', '20230421', '20230725', '20230726', '20230803', '20230818', '20230821', '20230825', '20231113', '20231128', '20240206', '20240214', '20240530', '20240610', '20240715', '20241021', '20241023', '20250130', '20250430', '20250521', '20250728', '20251006', '20251110'];
+export async function emojiKitchen(a, b) {
+  const urls = [];
+  for (const d of EK_DATES.slice().reverse()) for (const [x, y] of [[a, b], [b, a]]) urls.push(`https://www.gstatic.com/android/keyboard/emojikitchen/${d}/${x}/${x}_${y}.png`);
+  for (let i = 0; i < urls.length; i += 12) { // 12 por vez para nao abusar do servidor
+    const hits = await Promise.all(urls.slice(i, i + 12).map(u => http(u, { method: 'HEAD', timeout: 8000 }).then(r => (r.ok ? u : null)).catch(() => null)));
+    const hit = hits.find(Boolean); if (hit) return hit;
+  }
+  return null;
+}
 // Estilo brat: minusculas, Arial Narrow esticada na horizontal, baixa resolucao e borrada
 export async function bratWebp(text, bg, fg) {
   // estilo brat (minusculas, Arial Narrow esticada), mas NITIDO: sem borrao nem baixa resolucao
@@ -149,9 +161,7 @@ ${lines.map((l, i) => `<text x="120" y="${256 - h / 2 + 74 + i * 34}" font-famil
       const em = [...(ctx.q.match(/\p{Extended_Pictographic}(️|‍\p{Extended_Pictographic})*/gu) || [])];
       if (em.length < 2) return ctx.reply('🧪 *Uso:* /emojimix 😂+🔥');
       const cp = e => [...e].map(c => c.codePointAt(0).toString(16)).filter(h => h !== 'fe0f').map(h => 'u' + h).join('-');
-      if (!process.env.TENOR_API_KEY) throw new UserError('Emoji Kitchen não configurado (TENOR_API_KEY).');
-      const r = await http(`https://tenor.googleapis.com/v2/featured?key=${process.env.TENOR_API_KEY}&contentfilter=high&media_filter=png_transparent&component=proactive&collection=emoji_kitchen_v5&q=${encodeURIComponent(em[0] + '_' + em[1])}`).catch(() => null);
-      const url = r?.ok ? (await r.json()).results?.[0]?.url : null;
+      const url = await emojiKitchen(cp(em[0]), cp(em[1]));
       if (!url) { ctx.react('❌'); return ctx.reply(`❌ *Erro no Lab:* Essa combinação (${cp(em[0])} + ${cp(em[1])}) não existe no Emoji Kitchen.`); }
       return ctx.sticker(await imageToSticker(await getBuffer(url), packOf(ctx)));
     },

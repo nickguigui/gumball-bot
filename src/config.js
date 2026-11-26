@@ -27,6 +27,8 @@ export const config = {
   licenseUntil: env.LICENSE_UNTIL || '',
   // Integracoes
   tmdbKey: env.TMDB_API_KEY || '',
+  footballKey: env.FOOTBALL_DATA_API_KEY || '',
+  gnewsKey: env.GNEWS_API_KEY || '',
   spicyKey: env.SPICY_LYRICS_KEY || '',
   spicyOrigin: env.SPICY_LYRICS_ORIGIN || '',
   openaiKey: env.OPENAI_API_KEY || '',
