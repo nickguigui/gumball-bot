@@ -77,18 +77,26 @@ export function readExif(webp) {
 
 // Imagem -> figurinha 512x512 (contain, fundo transparente)
 export async function imageToSticker(buffer, { pack, author, fit = 'contain', round = false } = {}) {
-  let img = sharp(buffer, { animated: false }).resize(512, 512, { fit, background: { r: 0, g: 0, b: 0, alpha: 0 } });
+  // lanczos + leve nitidez: a foto nao fica "embacada" ao reduzir para 512
+  let img = sharp(buffer, { animated: false }).rotate().resize(512, 512, { fit, kernel: 'lanczos3', background: { r: 0, g: 0, b: 0, alpha: 0 } }).sharpen({ sigma: 0.6 });
   if (round) {
     const mask = Buffer.from('<svg width="512" height="512"><circle cx="256" cy="256" r="256" fill="#fff"/></svg>');
     img = sharp(await img.png().toBuffer()).composite([{ input: mask, blend: 'dest-in' }]);
   }
-  return addExif(await img.webp({ quality: 80 }).toBuffer(), pack, author);
+  let webp = await img.webp({ quality: 92, effort: 5, smartSubsample: true }).toBuffer();
+  if (webp.length > 95_000) webp = await sharp(webp).webp({ quality: 80, effort: 5 }).toBuffer(); // limite de figurinha estatica (~100 KB)
+  return addExif(webp, pack, author);
 }
 // Video/GIF -> figurinha animada (ate 8s, 512px, 15fps)
 export async function videoToSticker(buffer, ext = 'mp4', { pack, author } = {}) {
-  const webp = await ffmpeg(buffer, ext, ['-t', '8', '-vf',
-    "fps=15,scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:-1:-1:color=0x00000000,format=rgba",
-    '-loop', '0', '-an', '-vcodec', 'libwebp', '-lossless', '0', '-q:v', '50', '-preset', 'default'], 'webp');
+  // qualidade alta primeiro; so abaixa se passar do limite de figurinha animada do WhatsApp (500 KB)
+  let webp;
+  for (const [q, fps] of [[80, 15], [65, 15], [50, 12], [35, 10]]) {
+    webp = await ffmpeg(buffer, ext, ['-t', '8', '-vf',
+      `fps=${fps},scale=512:512:force_original_aspect_ratio=decrease:flags=lanczos,pad=512:512:-1:-1:color=0x00000000,format=rgba`,
+      '-loop', '0', '-an', '-vcodec', 'libwebp', '-lossless', '0', '-q:v', String(q), '-compression_level', '6', '-preset', 'picture'], 'webp');
+    if (webp.length <= 490_000) break;
+  }
   return addExif(webp, pack, author);
 }
 // Audio de um video/audio -> ogg/opus mono (formato da figurinha com som). null se nao tiver audio.

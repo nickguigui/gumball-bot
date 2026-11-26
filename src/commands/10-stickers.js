@@ -40,10 +40,10 @@ async function textSticker(ctx, opts, usage) {
 }
 // Estilo brat: minusculas, Arial Narrow esticada na horizontal, baixa resolucao e borrada
 export async function bratWebp(text, bg, fg) {
+  // estilo brat (minusculas, Arial Narrow esticada), mas NITIDO: sem borrao nem baixa resolucao
   const svg = textSvg(text, { bg, fill: fg, stroke: 'none', strokeW: 0, font: 'Arial Narrow, Liberation Sans Narrow, Arial, sans-serif', weight: 400, box: 480, base: 170 });
-  const crisp = await sharp(svg).resize(400, 512, { fit: 'fill' }).png().toBuffer(); // estreita e depois estica = letra larga
-  const low = await sharp(crisp).resize(150, 150, { fit: 'fill' }).png().toBuffer();   // perde resolucao
-  return sharp(low).resize(512, 512, { kernel: 'cubic' }).blur(1.2).webp({ quality: 70 }).toBuffer();
+  const stretched = await sharp(svg).resize(400, 512, { fit: 'fill' }).png().toBuffer();
+  return sharp(stretched).resize(512, 512, { fit: 'fill', kernel: 'lanczos3' }).webp({ quality: 95 }).toBuffer();
 }
 const BRAT = { brat: ['#8ACE00', '#000'], brat2: ['#ffffff', '#000'], bratbranco: ['#ffffff', '#000'], bratrosa: ['#ff9ecf', '#000'], bratpreto: ['#000000', '#fff'], bratvinho: ['#6b1028', '#fff'], bratazul: ['#3b82f6', '#000'] };
 
