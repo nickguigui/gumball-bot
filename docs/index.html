@@ -197,7 +197,7 @@
       </ul>
 
       <details class="mais"><summary><div><b>Mais opções</b><p>Entrada, moderação, horários, figurinhas, respostas e comandos</p></div></summary>
-        <h4>Quem usa o bot</h4>
+        <h3 class="sub">Quem usa o bot</h3>
         <ul class="opcoes">
           <li><div><b>Só admins usam comandos</b><p>Membros comuns não conseguem usar o bot.</p></div><input type="checkbox" class="switch" name="soadm"></li>
           <li><div><b>Mostrar mensagens apagadas</b><p>Quando alguém apaga uma mensagem, o bot manda de novo aqui no grupo.</p></div><input type="checkbox" class="switch" name="antiapagar"></li>
@@ -208,7 +208,7 @@
           <li><div><b>Auto-figurinha</b><p>Toda foto ou vídeo do grupo vira figurinha.</p></div><input type="checkbox" class="switch" name="autosticker"></li>
           <li><div><b>Espera entre comandos</b><p>Segundos que cada pessoa espera (0 = sem espera).</p></div><input type="number" name="tempocmd" min="0" max="300" class="num"></li>
         </ul>
-        <h4>Entrada e saída</h4>
+        <h3 class="sub">Entrada e saída</h3>
         <ul class="opcoes">
           <li class="col"><div class="row-sw"><div><b>Aviso de saída</b><p>Quando alguém sai do grupo.</p></div><input type="checkbox" class="switch" name="bye"></div>
             <textarea name="byeText" rows="2" placeholder="👋 {membro} saiu do grupo. Vai tarde! 😜"></textarea>
@@ -218,7 +218,7 @@
             <label class="field"><input name="allowDDI" placeholder=" "><span>Outros países que podem entrar (ex.: 351 Portugal, 1 EUA)</span></label></li>
           <li class="col"><div><b>Regras do grupo</b><p>Aparecem quando alguém manda /regras.</p></div><textarea name="rules" rows="3"></textarea></li>
         </ul>
-        <h4>Moderação</h4>
+        <h3 class="sub">Moderação</h3>
         <p class="small muted">Nunca vale para os admins. Tudo aqui precisa do bot como admin.</p>
         <ul class="opcoes">
           <li><div><b>Remover quem mandar link</b><p>Junto com "Apagar links", lá em cima.</p></div><input type="checkbox" class="switch" name="banLinks"></li>
@@ -229,20 +229,20 @@
           <li><div><b>Advertências até sair do grupo</b><p>Depois de quantas advertências a pessoa é removida.</p></div><input type="number" name="maxadv" min="1" max="10" class="num"></li>
           <li class="col"><div><b>Apagar estes tipos de mensagem</b><p>Vale para quem não é admin.</p></div><div class="chips" id="g-tipos"></div></li>
         </ul>
-        <h4>Abrir e fechar no horário</h4>
+        <h3 class="sub">Abrir e fechar no horário</h3>
         <p class="small muted">Fechado, só admins mandam mensagem. Precisa do bot como admin.</p>
         <ul class="opcoes">
           <li><div><b>Abrir todo dia às</b><p>Em branco: não abre sozinho.</p></div><input type="time" name="autoOpen" class="num"></li>
           <li><div><b>Fechar todo dia às</b><p>Em branco: não fecha sozinho.</p></div><input type="time" name="autoClose" class="num"></li>
         </ul>
-        <h4>Nome das figurinhas</h4>
+        <h3 class="sub">Nome das figurinhas</h3>
         <div class="row"><label class="field"><input name="stickerPack" placeholder=" "><span>Nome do pacote</span></label><label class="field"><input name="stickerAuthor" placeholder=" "><span>Autor</span></label></div>
-        <h4>Respostas automáticas</h4>
+        <h3 class="sub">Respostas automáticas</h3>
         <p class="small muted">Quando alguém escrever a palavra, o bot responde (no máximo 1 vez a cada 30 segundos por palavra).</p>
         <ul class="opcoes" id="g-respostas"></ul>
         <div class="row"><label class="field"><input id="g-resp-palavra" placeholder=" "><span>Palavra</span></label><label class="field"><input id="g-resp-texto" placeholder=" "><span>Resposta</span></label></div>
         <button type="button" class="btn tonal" id="g-resp-add" style="margin-top:8px"><span class="ms">add</span>Adicionar resposta</button>
-        <h4>Comandos ligados</h4>
+        <h3 class="sub">Comandos ligados</h3>
         <p class="small muted">Desmarque o que não quer neste grupo. Os comandos de admin ficam sempre ligados.</p>
         <div id="g-cmds"></div>
       </details>

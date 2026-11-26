@@ -224,6 +224,6 @@ textarea:focus{outline:2px solid var(--primary);outline-offset:-1px}
 .mais>summary::after{content:'expand_more';font-family:'Material Symbols Rounded';font-size:24px;color:var(--on-surface-var);transition:transform .2s}
 .mais[open]>summary::after{transform:rotate(180deg)}
 .mais>summary b{font-weight:700}.mais>summary p{margin:2px 0 0;color:var(--on-surface-var);font-size:14px}
-.mais h4{font-size:14px;color:var(--primary);margin:24px 4px 4px}
+.mais h3.sub{font-size:14px;color:var(--primary);margin:24px 4px 4px}
 .cmd-sec{margin:12px 0}.cmd-sec>b{display:block;margin:0 4px 8px;font-size:14px}
 .savebar{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;padding:12px 0;background:var(--surface);border-top:1px solid var(--outline-var);z-index:2}
