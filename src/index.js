@@ -31,6 +31,11 @@ async function connect() {
     generateHighQualityLinkPreview: false,
   });
 
+  // No GitHub Actions o log e publico: sem sessao e sem pareamento pedido, nao mostra QR, so sai.
+  if (process.env.CI && !sock.authState.creds.registered && !config.pairNumber) {
+    console.error('❌ Sem sessão do WhatsApp. Rode o workflow com pair = "sim" para conectar.');
+    process.exit(3);
+  }
   if (config.pairNumber && !sock.authState.creds.registered) {
     setTimeout(async () => {
       try {

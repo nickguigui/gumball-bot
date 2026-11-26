@@ -77,9 +77,14 @@ jobs:
           npm start &
           BOT=$!
           while kill -0 $BOT 2>/dev/null && [ $(date +%s) -lt $fim ]; do
-            sleep 600
+            for i in $(seq 60); do kill -0 $BOT 2>/dev/null || break; sleep 10; done
             salvar
           done
+          if ! kill -0 $BOT 2>/dev/null; then
+            wait $BOT; code=$?
+            salvar
+            if [ "$code" = "3" ] || [ "$code" = "1" ]; then echo "⏹️ Bot parou (código $code): não vou redisparar."; exit 0; fi
+          fi
           kill -TERM $BOT 2>/dev/null; sleep 5
           salvar
           echo "🔁 Disparando a próxima execução"
