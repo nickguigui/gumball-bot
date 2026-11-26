@@ -1,7 +1,7 @@
 name: Gumball Servidor
 
 # Servidor de TODOS os numeros (quem conecta pelo site). Roda ~5h40, salva os dados
-# criptografados em state/servidor.enc a cada 5 min e dispara a proxima execucao.
+# criptografados no ramo estado a cada 1 min e dispara a proxima execucao.
 # O site acha o servidor pelo endereco do tunel publicado em endpoint.json.
 on:
   schedule:
@@ -33,14 +33,17 @@ jobs:
       - name: Restaurar dados
         env:
           STATE_KEY: ${{ secrets.STATE_KEY }}
-          STATE_FILE: state/servidor.enc
+          STATE_FILE: ${{ runner.temp }}/servidor.enc
           STATE_DIRS: ./data
-        run: node scripts/state.mjs unpack
+        run: |
+          # dados ficam no ramo "estado" (um unico commit sobrescrito: o historico nao incha)
+          if git fetch -q --depth=1 origin estado 2>/dev/null; then git show FETCH_HEAD:servidor.enc > "$STATE_FILE"; echo "📦 dados do ramo estado"; else cp state/servidor.enc "$STATE_FILE"; echo "📦 dados antigos do main"; fi
+          node scripts/state.mjs unpack
 
       - name: Rodar o servidor
         env:
           STATE_KEY: ${{ secrets.STATE_KEY }}
-          STATE_FILE: state/servidor.enc
+          STATE_FILE: ${{ runner.temp }}/servidor.enc
           STATE_DIRS: ./data
           DATA_ROOT: ./data/tenants
           PORT: '8787'
@@ -70,7 +73,14 @@ jobs:
             for i in 1 2 3; do git pull -q --rebase -X theirs && git push -q && return 0; sleep 3; done
             echo "⚠️ push falhou"
           }
-          salvar() { node scripts/state.mjs pack >/dev/null && publicar state/servidor.enc "servidor: dados"; }
+          # salva a sessao a cada minuto no ramo "estado" (force push de um commit so, sem historico)
+          salvar() {
+            node scripts/state.mjs pack >/dev/null || return 1
+            local b t c; b=$(git hash-object -w "$STATE_FILE"); t=$(printf '100644 blob %s\tservidor.enc\n' "$b" | git mktree)
+            c=$(git commit-tree "$t" -m "servidor: dados $(date -u +%H:%M)") && git push -fq origin "$c:refs/heads/estado" || echo "⚠️ não salvei"
+          }
+          # cancelado (deploy novo) ou derrubado: para o bot e salva antes de sair
+          trap 'kill -TERM $SRV 2>/dev/null; sleep 3; salvar; exit 0' INT TERM
 
           # ffmpeg + yt-dlp em paralelo (o servidor ja atende enquanto instala)
           ( sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu fonts-noto-color-emoji > /dev/null
@@ -102,7 +112,7 @@ jobs:
 
           fim=$(( $(date +%s) + 340*60 ))
           while kill -0 $SRV 2>/dev/null && [ $(date +%s) -lt $fim ]; do
-            for i in $(seq 30); do kill -0 $SRV 2>/dev/null || break; sleep 10; done
+            for i in $(seq 6); do kill -0 $SRV 2>/dev/null || break; sleep 10; done
             salvar
             grep -E "ERR|erro|Error" servidor.log | tail -3 || true
           done
@@ -112,3 +122,17 @@ jobs:
           salvar
           echo "🔁 Disparando o próximo turno"
           gh workflow run servidor.yml --repo "$GITHUB_REPOSITORY" --ref main || echo "⚠️ não consegui disparar o próximo"
+
+      - name: Salvar ao cancelar
+        if: cancelled() || failure()
+        env:
+          STATE_KEY: ${{ secrets.STATE_KEY }}
+          STATE_FILE: ${{ runner.temp }}/servidor.enc
+          STATE_DIRS: ./data
+        run: |
+          pkill -TERM -f "src/manager.js" 2>/dev/null; sleep 3
+          [ -d data/tenants ] || exit 0
+          node scripts/state.mjs pack >/dev/null || exit 0
+          git config user.name "gumball-servidor"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          b=$(git hash-object -w "$STATE_FILE"); t=$(printf '100644 blob %s\tservidor.enc\n' "$b" | git mktree)
+          c=$(git commit-tree "$t" -m "servidor: dados (cancelado)") && git push -fq origin "$c:refs/heads/estado" && echo "💾 salvo"
