@@ -14,12 +14,18 @@ const CAT = '🧰 UTILITÁRIOS', EXT = '🧰 MAIS UTILIDADES';
 // ---------- IA (OpenAI-compativel; sem chave usa Pollinations, gratis) ----------
 export async function chat(prompt, system) {
   const sys = system || config.gptPersona || 'Você é a assistente virtual de um bot de WhatsApp. Responda em português do Brasil, de forma direta, simpática e curta. Use formatação do WhatsApp (*negrito*, _itálico_), nunca Markdown com ** ou tabelas.';
-  const body = { model: config.openaiKey ? config.openaiModel : 'openai', messages: [{ role: 'system', content: sys }, { role: 'user', content: prompt }] };
-  const url = config.openaiKey ? `${config.openaiBase}/chat/completions` : 'https://text.pollinations.ai/openai';
-  const r = await http(url, { method: 'POST', timeout: 60000, headers: { 'Content-Type': 'application/json', ...(config.openaiKey ? { Authorization: `Bearer ${config.openaiKey}` } : {}) }, body: JSON.stringify(body) });
-  if (!r.ok) throw new UserError('O serviço de IA não respondeu agora. Tente de novo em instantes.');
-  const j = await r.json();
-  return (j.choices?.[0]?.message?.content || '').replace(/\*\*(.+?)\*\*/g, '*$1*').trim();
+  const messages = [{ role: 'system', content: sys }, { role: 'user', content: prompt }];
+  // 1) provedor pago (se tiver chave e credito); 2) IA gratis (Pollinations) como reserva
+  const tries = [];
+  if (config.openaiKey && !(chat.paidOffUntil > Date.now())) tries.push({ paid: true, url: `${config.openaiBase}/chat/completions`, model: config.openaiModel, auth: config.openaiKey });
+  tries.push({ url: 'https://text.pollinations.ai/openai', model: 'openai' });
+  for (const t of tries) {
+    const r = await http(t.url, { method: 'POST', timeout: 60000, headers: { 'Content-Type': 'application/json', ...(t.auth ? { Authorization: `Bearer ${t.auth}` } : {}) }, body: JSON.stringify({ model: t.model, messages }) }).catch(() => null);
+    if (r?.ok) { const j = await r.json(); const out = (j.choices?.[0]?.message?.content || '').replace(/\*\*(.+?)\*\*/g, '*$1*').trim(); if (out) return out; }
+    // sem credito/limite/chave invalida: deixa o pago de lado por 30 min e usa o gratis
+    if (t.paid && r && [401, 402, 403, 429].includes(r.status)) chat.paidOffUntil = Date.now() + 30 * 60_000;
+  }
+  throw new UserError('O serviço de IA não respondeu agora. Tente de novo em instantes.');
 }
 
 // ---------- helpers ----------
