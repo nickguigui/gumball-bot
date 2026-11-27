@@ -1,6 +1,6 @@
 // Robo de promocoes com link de afiliado (Amazon, Mercado Livre, Shopee, AliExpress) para grupos e canais.
 import { converter, mlCodigos, brl, LOJAS } from '../lib/afiliados.js';
-import { loadPromos, savePromos, resumo, ofertaDoLink, postarOferta, fila, setFila, legenda, criarCanal } from '../promos.js';
+import { loadPromos, savePromos, resumo, ofertaDoLink, postarOferta, fila, setFila, legenda, criarCanal, postarCupons, postarEsgotados, legendaCupons, lojaLink } from '../promos.js';
 
 const C = '🛒 PROMOÇÕES';
 const SITE = 'https://nickguigui.github.io/gumball-bot/#conectar';
@@ -11,7 +11,8 @@ function lerExtras(q) {
   const num = s => s && Number(s.replace(/\./g, '').replace(',', '.'));
   const de = /\bde\s+(?:r\$\s*)?([\d.,]+)/i.exec(antes); const cupom = /\bcupom\s+(\S+)/i.exec(antes);
   const preco = /(?:^|\s)(?:por\s+)?(?:r\$\s*)?([\d.]*\d,\d{2}|\d+(?:\.\d{3})*)(?=\s|$)/i.exec(antes.replace(de?.[0] || '#', ' '));
-  return { preco: num(preco?.[1]) || undefined, precoAntigo: num(de?.[1]) || undefined, cupom: cupom?.[1], titulo: titulo?.trim() || undefined };
+  const loja = /\bloja\s+([^|]+?)(?=\s+(?:obs|cupom|de)\b|$)/i.exec(antes); const obs = /\bobs\s+([^|]+?)(?=\s+(?:loja|cupom)\b|$)/i.exec(antes);
+  return { preco: num(preco?.[1]) || undefined, precoAntigo: num(de?.[1]) || undefined, cupom: cupom?.[1], titulo: titulo?.trim() || undefined, lojaOficial: loja?.[1]?.trim(), obs: obs?.[1]?.trim() };
 }
 const GUIA = `🛒 *COMO CRIAR SUAS CONTAS DE AFILIADO*\n_(é grátis; nada de senha no bot: você só cola o código que cada loja te dá)_\n
 *1. Amazon Associados*
@@ -98,6 +99,10 @@ export const commands = [
       if (O === 'busca' || O === 'buscas') { p.buscas = val ? val.split(',').map(s => s.trim()).filter(Boolean).slice(0, 20) : []; return ok(p.buscas.length ? `Ofertas automáticas sobre: *${p.buscas.join(', ')}*` : 'Ofertas automáticas de tudo (mais vendidos).'); }
       if (O === 'desconto') { const n = parseInt(val); if (!(n >= 0 && n <= 90)) return ctx.reply('🛒 Ex.: */promocoes desconto 20* (só posta com 20% ou mais)'); p.descontoMin = n; return ok(`Só ofertas com *${n}%* ou mais de desconto.`); }
       if (O === 'assinatura') { p.assinatura = val.slice(0, 60); return ok(p.assinatura ? `Assinatura: _${p.assinatura}_` : 'Sem assinatura.'); }
+      if (O === 'estilo') { const e = /fof/i.test(val) ? 'fofo' : /prof/i.test(val) ? 'profissional' : null; if (!e) return ctx.reply('🛒 Estilos: */promocoes estilo profissional* (canal de promoção) ou */promocoes estilo fofo* (emoticons e carinho)'); p.estilo = e; return ok(`Estilo dos posts: *${e}*`); }
+      if (O === 'datas') { p.datas = !/^(off|nao|não|desligar)/i.test(val); return ok(p.datas ? 'Contagem das datas (Black Friday, 11.11...) *ligada* nos posts.' : 'Contagem das datas *desligada*.'); }
+      if (O === 'cupons') { const off = /^(off|nao|não|desligar)/i.test(val); p.cupons = { ...p.cupons, auto: !off }; return ok(off ? 'Cupons automáticos *desligados*.' : 'Cupons automáticos *ligados*: novos cupons de Mercado Livre, Amazon e Shopee viram post, e aviso quando esgotam.'); }
+      if (O === 'apoio') { p.apoio = /^(on|sim|ligar)/i.test(val); return ok(p.apoio ? '💚 Obrigado! 2% dos links vão usar o código de afiliado do criador do Gumball (os outros 98% são seus).' : 'Apoio desligado: 100% dos links usam o seu código.'); }
       if (O === 'emoji') { p.emoji = val.slice(0, 8) || '🔥'; return ok(`Emoji das ofertas: ${p.emoji}`); }
       if (O === 'fila') { const f = fila(); return ctx.reply(f.length ? `🛒 *FILA (${f.length})*\n\n${f.slice(0, 15).map((o, i) => `${i + 1}. ${String(o.titulo).slice(0, 50)} — ${brl(o.preco) || 's/ preço'} (${o.loja})`).join('\n')}\n\n🗑️ */promocoes limpar*` : '🛒 A fila está vazia. Adicione com */promo <link>*.'); }
       if (O === 'limpar') { setFila([]); return ctx.reply('🗑️ Fila de promoções esvaziada.'); }
@@ -135,6 +140,35 @@ export const commands = [
       try { await ctx.sock.newsletterDelete(meta.id); } catch (e) { return ctx.reply(`🗑️ O WhatsApp não deixou apagar (${e.message}). Só o dono do canal pode apagar.`); }
       const p = loadPromos(); p.destinos = p.destinos.filter(d => d.jid !== meta.id && d.invite !== l); savePromos(p);
       return ctx.reply(`🗑️ Canal *${nome}* apagado.`);
+    },
+  },
+  {
+    // cupom manual: /cupom ml CODIGO descricao | link   (varios: um por linha)
+    name: 'cupom', aliases: ['novocupom'], category: C, react: '🎟️', run: async ctx => {
+      const LJ = { ml: 'mercadolivre', mercadolivre: 'mercadolivre', meli: 'mercadolivre', amazon: 'amazon', amz: 'amazon', shopee: 'shopee', ali: 'aliexpress', aliexpress: 'aliexpress' };
+      const [lj] = ctx.args; const loja = LJ[(lj || '').toLowerCase()];
+      if (!loja) return ctx.reply('🎟️ *Uso:* /cupom <loja> CODIGO descrição [| link]\nLojas: ml, amazon, shopee, ali\nEx.: */cupom ml MELIAGORA 10% OFF acima de R$199 | https://meli.la/xyz*\nVários cupons: um por linha (CODIGO descrição).\n\nO post sai com a imagem da loja em todos os destinos do robô. Esgotou? */esgotou CODIGO*');
+      const [corpo, link] = ctx.q.replace(/^\S+\s*/, '').split('|').map(x => x.trim());
+      const lista = corpo.split('\n').map(l => l.trim()).filter(Boolean).map(l => { const [codigo, ...d] = l.split(/\s+/); return { codigo: codigo.toUpperCase(), titulo: '', desc: d.join(' ') }; }).filter(c => /^[A-Z0-9_-]{3,30}$/.test(c.codigo));
+      if (!lista.length) return ctx.reply('🎟️ Escreva o código do cupom. Ex.: */cupom ml MELIAGORA 10% OFF acima de R$199*');
+      const p = loadPromos();
+      if (!p.destinos.length) return ctx.reply(`🎟️ Assim vai ficar (escolha onde postar com */promocoes aqui*):\n\n${legendaCupons(loja, lista, link || await lojaLink(loja, p), p)}`);
+      const n = await postarCupons(ctx.sock, loja, lista, { link }, p);
+      return ctx.reply(`🎟️ Cupom postado em ${n} destino(s)! Quando acabar: */esgotou ${lista[0].codigo}*`);
+    },
+  },
+  {
+    name: 'esgotou', aliases: ['esgotado', 'cupomesgotado'], category: C, react: '❌', run: async ctx => {
+      const cods = ctx.args.map(c => c.toUpperCase()).filter(c => /^[A-Z0-9_-]{3,30}$/.test(c));
+      if (!cods.length) return ctx.reply('❌ *Uso:* /esgotou CODIGO [OUTRO...]\nPosta "🎟️ Cupom: CODIGO ESGOTADO ❌" nos destinos do robô.');
+      const n = await postarEsgotados(ctx.sock, cods, loadPromos());
+      return ctx.reply(`❌ Aviso de esgotado postado em ${n} destino(s).`);
+    },
+  },
+  {
+    name: 'cupons', category: C, react: '🎟️', run: ctx => {
+      const r = resumo();
+      return ctx.reply(r.cuponsAtivos.length ? `🎟️ *CUPONS POSTADOS (ainda ativos)*\n\n${r.cuponsAtivos.map(c => `• *${c.codigo}* (${LOJAS[c.loja] || c.loja})`).join('\n')}\n\n❌ Acabou algum? */esgotou CODIGO*\n🤖 Cupons automáticos: ${r.cupons?.auto ? 'ligados' : 'desligados'} (*/promocoes cupons on|off*)` : `🎟️ Nenhum cupom postado ainda.\n• Manual: */cupom ml CODIGO descrição*\n• Automático: */promocoes cupons on* (com o robô ligado)`);
     },
   },
 ];

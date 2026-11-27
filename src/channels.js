@@ -5,6 +5,9 @@ import fs from 'node:fs';
 import sharp from 'sharp';
 import * as cheerio from 'cheerio';
 import { enviarCanal } from './lib/canal.js';
+import { generateMessageIDV2 } from 'baileys';
+import { queue } from './queue.js';
+import { sentIds } from './context.js';
 import { getText, getBuffer, getJson } from './lib/http.js';
 import { addExif, ffmpeg, esc, wrap } from './lib/media.js';
 import { db } from './db.js';
@@ -16,6 +19,7 @@ const MAX_PER_TICK = 6;        // max. posts por rodada
 export const DEFAULT_SLOTS = {
   on: '06:00', curiosidade: '08:00', data: '09:00', musica: '10:00', icon: '12:00', isso: '14:00', enquete: '15:00',
   figurinhas: '16:00', quiz: '17:00', resposta: '19:00', mecore: '20:00', jogo: '21:30', off: '23:30',
+  jogos: '09:30', tabela: '22:30', // so com liga de futebol escolhida (ch.liga)
 };
 export const DAILY_LIMITS = { news: 8, videos: 3, releases: 2 };
 // WhatsApp nao tem spoiler: ~4000 caracteres invisiveis forcam o "Ler mais" e escondem a resposta.
@@ -42,6 +46,7 @@ const pickUnused = (ch, key, list, idOf = x => JSON.stringify(x)) => {
 };
 
 async function resolveJid(sock, ch) {
+  if (ch.grupo) return ch.grupo; // canal automatico postando num GRUPO
   if (ch.jid) return ch.jid;
   const c = db.get(K(ch, 'jid')); if (c) return c;
   const meta = await sock.newsletterMetadata('invite', (ch.invite || '').split('/').pop());
@@ -49,7 +54,59 @@ async function resolveJid(sock, ch) {
 }
 async function send(sock, jid, content) {
   const w = lastPostAt + GAP - Date.now(); if (w > 0) await new Promise(r => setTimeout(r, w));
-  const r = await enviarCanal(sock, jid, content); lastPostAt = Date.now(); return r;
+  const r = jid.endsWith('@g.us')
+    ? await queue.push(() => { const messageId = generateMessageIDV2(sock.user?.id); sentIds.add(messageId); return sock.sendMessage(jid, content, { messageId }); })
+    : await enviarCanal(sock, jid, content);
+  lastPostAt = Date.now(); return r;
+}
+
+// ---------- futebol (ESPN, gratis): jogos do dia e tabela ----------
+export const LIGAS = { brasileirao: ['bra.1', 'Brasileirão'], serieb: ['bra.2', 'Série B'], libertadores: ['conmebol.libertadores', 'Libertadores'], sulamericana: ['conmebol.sudamericana', 'Sul-Americana'], copadobrasil: ['bra.copa_do_brazil', 'Copa do Brasil'], champions: ['uefa.champions', 'Champions League'], premier: ['eng.1', 'Premier League'], laliga: ['esp.1', 'La Liga'], seriea: ['ita.1', 'Serie A (Itália)'], bundesliga: ['ger.1', 'Bundesliga'], ligue1: ['fra.1', 'Ligue 1'] };
+async function jogosDoDia(ch) {
+  const [cod, nome] = LIGAS[ch.liga] || []; if (!cod) return null;
+  const { events = [] } = await getJson(`https://site.api.espn.com/apis/site/v2/sports/soccer/${cod}/scoreboard`);
+  const hoje = now().day; const hora = d => new Date(d).toLocaleTimeString('pt-BR', { timeZone: config.timezone, hour: '2-digit', minute: '2-digit' });
+  const dia = d => new Date(d).toLocaleDateString('en-CA', { timeZone: config.timezone });
+  const lista = events.filter(e => dia(e.date) === hoje);
+  if (!lista.length) return null;
+  const linhas = lista.map(e => { const [a, b] = e.competitions?.[0]?.competitors || []; const casa = (a?.homeAway === 'home' ? a : b), fora = (a?.homeAway === 'home' ? b : a); return `⚽ *${casa?.team?.shortDisplayName}* x *${fora?.team?.shortDisplayName}* — ${hora(e.date)}`; });
+  return { text: `${E(ch)} *_🗓️ JOGOS DE HOJE: ${nome.toUpperCase()}_*
+
+${linhas.join('\n')}
+
+_Quem leva? Reage aí!_${sign(ch)}` };
+}
+async function tabela(ch) {
+  const [cod, nome] = LIGAS[ch.liga] || []; if (!cod) return null;
+  const d = await getJson(`https://site.api.espn.com/apis/v2/sports/soccer/${cod}/standings`);
+  const entries = (d.children?.[0]?.standings?.entries || []).map(x => ({ t: x.team.shortDisplayName || x.team.displayName, st: Object.fromEntries(x.stats.map(s => [s.name, s.displayValue])) })).sort((a, b) => +a.st.rank - +b.st.rank);
+  if (!entries.length) return null;
+  const med = i => ['🥇', '🥈', '🥉'][i] || `${i + 1}.`;
+  const top = entries.slice(0, 10).map((e, i) => `${med(i)} *${e.t}* — ${e.st.points} pts _(${e.st.gamesPlayed} j)_`);
+  const z4 = entries.length > 14 ? `
+
+🔻 *Zona de rebaixamento:* ${entries.slice(-4).map(e => e.t).join(', ')}` : '';
+  return { text: `${E(ch)} *_📊 TABELA: ${nome.toUpperCase()}_*
+
+${top.join('\n')}${z4}${sign(ch)}` };
+}
+
+// ---------- posts escritos pela pessoa (agora ou agendados) ----------
+export async function postarTexto(sock, ch, { texto, foto }) {
+  const jid = await resolveJid(sock, ch);
+  const t = String(texto || '').trim(); if (!t && !foto) throw new Error('Escreva o post ou escolha uma foto.');
+  return send(sock, jid, foto ? { image: foto, caption: t } : { text: t });
+}
+export function agendar(ch, item) { const k = K(ch, 'agenda'); const l = db.get(k, []); l.push(item); db.set(k, l.sort((a, b) => a.em - b.em).slice(0, 50)); return l.length; }
+export const agenda = ch => db.get(K(ch, 'agenda'), []).map(({ em, texto, fotoB64 }) => ({ em, texto: String(texto || '').slice(0, 80), foto: !!fotoB64 }));
+export function desagendar(ch, em) { const k = K(ch, 'agenda'); db.set(k, db.get(k, []).filter(i => i.em !== em)); }
+export async function tickAgenda(sock) {
+  for (const ch of loadChannels()) {
+    const k = K(ch, 'agenda'); const l = db.get(k, []); if (!l.length) continue;
+    const vencidos = l.filter(i => i.em <= Date.now()); if (!vencidos.length) continue;
+    db.set(k, l.filter(i => i.em > Date.now()));
+    for (const i of vencidos) await postarTexto(sock, ch, { texto: i.texto, foto: i.fotoB64 ? Buffer.from(i.fotoB64, 'base64') : null }).catch(e => console.error(`[canal ${ch.id}] agendado:`, e.message));
+  }
 }
 
 // ---------- fontes ----------
@@ -169,6 +226,8 @@ const SLOT = {
     const t = await ai(ch, 'Escreva um "me core": frase curtinha melancólica e poética sobre ser fã de/viver o assunto, seguida de uma quebra cômica. Máx. 280 caracteres.');
     return { text: `${E(ch)} *_🖤 ME CORE_*\n\n${t}${sign(ch)}` };
   },
+  async jogos(ch) { return jogosDoDia(ch); },
+  async tabela(ch) { return tabela(ch); },
   async jogo(ch) {
     const kind = pickUnused(ch, 'jogo', ['complete a frase', 'adivinhe pelos emojis', 'qual combina com seu signo', 'verdade ou mentira', 'monte seu combo ideal', 'descreva em 3 palavras']);
     const j = await ai(ch, `Crie o "jogo da noite" para os seguidores do canal no formato "${kind}". Curto, interativo, peça para reagirem. Se o jogo tiver resposta certa, NÃO coloque a resposta no texto, só no campo "resposta". JSON: {"texto":"...","resposta":"... ou null"}`, true);

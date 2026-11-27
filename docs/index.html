@@ -121,7 +121,15 @@
 
 <section id="tab-canal" class="tab" hidden>
   <h2 class="section-title" style="margin-top:16px">Canal automático</h2>
-  <p class="section-sub">Diga o assunto. O site pesquisa na internet, monta a grade do dia inteira com uma prévia de cada post e você aprova. São 15 tipos de post, 40 segundos entre eles, e o conteúdo não se repete.</p>
+  <p class="section-sub">Diga o assunto. O site pesquisa na internet, monta a grade do dia inteira com uma prévia de cada post e você aprova. Funciona num canal ou num grupo, com 40 segundos entre os posts, e o conteúdo não se repete.</p>
+  <div class="ia-box">
+    <h3><span class="ms">auto_awesome</span>Descreva o que você quer</h3>
+    <p class="muted small">Uma IA grátis preenche tudo para você: assunto, nome, emoji, tom, liga de futebol, quais posts ligar e a foto do canal. Depois é só conferir.</p>
+    <label class="field ed-field"><textarea id="ch-desc" rows="2" placeholder=" "></textarea><span>Ex.: quero um grupo de futebol do Flamengo, bem zoeiro</span></label>
+    <div class="actions"><button class="btn filled" type="button" id="btn-ia"><span class="ms">auto_awesome</span>Configurar tudo com IA</button></div>
+    <p id="ia-msg" class="gal-dica" hidden></p>
+  </div>
+  <p class="muted small" style="margin:12px 0 4px">Ou preencha do seu jeito:</p>
   <form id="canal-form" class="form">
     <label class="field"><input name="topic" required placeholder=" "><span>Assunto do canal (ex.: Taylor Swift, Roblox, Fórmula 1)</span></label>
     <div class="row">
@@ -131,7 +139,10 @@
     </div>
     <div class="row">
       <label class="field"><input name="artist" placeholder=" "><span>Artista ou banda, para a música do dia (opcional)</span></label>
-      <label class="field"><select name="tone"><option>animado, próximo e divertido</option><option>informativo e direto</option><option>fofo e acolhedor</option><option>zoeiro e cheio de memes</option></select><span>Tom dos posts</span></label>
+      <label class="field"><select name="tone"><option>animado, próximo e divertido</option><option>informativo e direto</option><option>fofo e acolhedor</option><option>zoeiro e cheio de memes</option><option>profissional, como um portal de notícias</option></select><span>Tom dos posts</span></label>
+    </div>
+    <div class="row">
+      <label class="field"><select name="liga"><option value="">Sem futebol</option><option value="brasileirao">Brasileirão</option><option value="serieb">Série B</option><option value="libertadores">Libertadores</option><option value="sulamericana">Sul-Americana</option><option value="copadobrasil">Copa do Brasil</option><option value="champions">Champions League</option><option value="premier">Premier League</option><option value="laliga">La Liga</option><option value="seriea">Serie A (Itália)</option><option value="bundesliga">Bundesliga</option><option value="ligue1">Ligue 1</option></select><span>Liga de futebol: jogos do dia e tabela (opcional)</span></label>
     </div>
     <div><button class="btn filled large" type="submit"><span class="ms">travel_explore</span>Pesquisar e montar a grade</button></div>
   </form>
@@ -144,8 +155,31 @@
 
     <div class="approve">
       <h3>Aprovou?</h3>
-      <p class="muted">Cole o link do seu canal (no canal: ⋮ › Informações do canal › Compartilhar link). O número conectado ao bot precisa ser admin do canal.</p>
-      <label class="field" style="max-width:560px"><input id="ch-invite" placeholder=" "><span>Link do canal (https://whatsapp.com/channel/...)</span></label>
+      <p class="muted">Onde os posts vão sair?</p>
+      <div class="seg" id="ch-destino" role="radiogroup" aria-label="Onde postar">
+        <label><input type="radio" name="dest" value="canal" checked><span class="ms">campaign</span>Canal</label>
+        <label><input type="radio" name="dest" value="grupo"><span class="ms">groups</span>Grupo</label>
+      </div>
+      <div id="dest-canal">
+        <p class="muted">Cole o link do seu canal (no canal: ⋮ › Informações do canal › Compartilhar link). O número conectado ao bot precisa ser admin do canal.</p>
+        <label class="field" style="max-width:560px"><input id="ch-invite" placeholder=" "><span>Link do canal (https://whatsapp.com/channel/...)</span></label>
+        <details class="novo-canal">
+          <summary><span class="ms">add_circle</span>Ainda não tenho canal: criar um pra mim</summary>
+          <div class="nc-linha">
+            <figure class="cf-foto"><img id="ch-foto" alt="Foto do canal gerada por IA" hidden><figcaption class="muted small" id="ch-foto-msg">A foto é gerada por IA a partir do assunto.</figcaption></figure>
+            <div class="nc-campos">
+              <label class="field"><input id="ch-cnome" placeholder=" " maxlength="100"><span>Nome do canal</span></label>
+              <label class="field ed-field"><textarea id="ch-cdesc" rows="3" placeholder=" " maxlength="2048"></textarea><span>Descrição</span></label>
+              <div class="actions"><button class="btn tonal" type="button" id="btn-foto"><span class="ms">image</span>Gerar foto</button><button class="btn filled" type="button" id="btn-criar"><span class="ms">add</span>Criar canal</button></div>
+              <p id="criar-msg" class="gal-dica" hidden></p>
+            </div>
+          </div>
+        </details>
+      </div>
+      <div id="dest-grupo" hidden>
+        <p class="muted">Escolha o grupo. O bot precisa estar nele (entre no painel primeiro, na aba Conectar / Painel).</p>
+        <label class="field" style="max-width:560px"><select id="ch-grupo"><option value="">Carregando grupos...</option></select><span>Grupo</span></label>
+      </div>
       <div class="actions" style="margin-top:16px"><button class="btn filled" id="btn-approve"><span class="ms">check</span>Aprovar</button></div>
       <div id="approve-out" hidden>
         <pre id="cfg-json" hidden></pre><button id="btn-copy" hidden></button>
@@ -220,6 +254,17 @@
     <h3 class="painel-sec">Canais automáticos</h3>
     <ul class="opcoes" id="pn-canais"></ul>
     <a class="btn tonal" href="#canal" data-tab="canal"><span class="ms">add</span>Criar canal automático</a>
+    <form id="pn-post" class="form escrever" hidden>
+      <h3 class="painel-sec">Escrever post em <span id="pp-nome"></span></h3>
+      <label class="field ed-field"><textarea name="texto" rows="5" placeholder=" " maxlength="4000"></textarea><span>Seu post (aceita *negrito*, _itálico_ e emojis)</span></label>
+      <div class="row">
+        <label class="field"><input type="file" name="foto" accept="image/*"><span>Foto (opcional)</span></label>
+        <label class="field"><input type="datetime-local" name="em"><span>Agendar (vazio = postar agora)</span></label>
+      </div>
+      <div class="savebar"><button class="btn filled" type="submit"><span class="ms">send</span>Postar</button><button class="btn text" type="button" id="pp-fechar">Fechar</button></div>
+      <p id="pp-msg" class="gal-dica" hidden></p>
+      <ul class="opcoes" id="pp-agenda"></ul>
+    </form>
 
     <h3 class="painel-sec">Precisa de ajuda?</h3>
     <p class="muted">Mande <code>/menu</code> em qualquer grupo ligado. Dúvidas: <a href="https://livepix.gg/nickguigui" target="_blank" rel="noopener">fale com o Nick</a>.</p>
@@ -371,6 +416,16 @@
       </div>
       <p class="muted small">As ofertas automáticas vêm da Shopee e do AliExpress (as APIs oficiais delas). Amazon e Mercado Livre entram pelos links que você colar em "Postar uma oferta".</p>
 
+      <h3 class="painel-sec">Estilo dos posts</h3>
+      <div class="seg estilos">
+        <label><input type="radio" name="estilo" value="profissional" checked><span><b>Profissional</b><small>Como canal de promoção: título chamativo, DE/POR, 🔥, cupom, link e "anúncio"</small></span></label>
+        <label><input type="radio" name="estilo" value="fofo"><span><b>Fofo</b><small>"achadinho do dia", emoticons e carinho 💕</small></span></label>
+      </div>
+      <ul class="opcoes">
+        <li><div><b>Contagem das datas</b><p>Uma semana antes da Black Friday (e 2 a 3 dias antes de 11.11, 12.12, Natal...) os posts ganham "FALTAM 2 DIAS PARA A BLACK FRIDAY!", e na véspera sai o aviso "à meia-noite já começa".</p></div><input type="checkbox" class="switch" name="datas" checked aria-label="Contagem das datas"></li>
+        <li><div><b>Cupons automáticos</b><p>Novos cupons públicos de Mercado Livre, Amazon e Shopee viram post (com a imagem da loja), e eu aviso "ESGOTADO ❌" quando somem.</p></div><input type="checkbox" class="switch" name="cuponsAuto" checked aria-label="Cupons automáticos"></li>
+      </ul>
+
       <h3 class="painel-sec">Suas lojas</h3>
       <ul class="opcoes">
         <li class="col"><div class="row-sw"><div><b>Amazon Associados</b><p id="pr-st-amazon">Não configurada</p></div></div>
@@ -387,8 +442,28 @@
           <details class="guia"><summary>Como conseguir</summary><ol><li>Cadastre-se em <a href="https://portals.aliexpress.com" target="_blank" rel="noopener">portals.aliexpress.com</a>; o <b>Tracking ID</b> fica no painel.</li><li>Em <a href="https://openservice.aliexpress.com" target="_blank" rel="noopener">openservice.aliexpress.com</a>, crie um app do tipo afiliado e copie <b>App Key</b> e <b>App Secret</b>.</li><li>Cole os três aqui.</li></ol></details></li>
       </ul>
 
+      <h3 class="painel-sec">Apoiar o Gumball</h3>
+      <ul class="opcoes">
+        <li><div><b>Apoiar com 2% dos links</b><p>Opcional. Se ligar, 2 de cada 100 links postados usam o código de afiliado do criador do Gumball, e as comissões dessas vendas ajudam a manter o bot grátis. Os outros 98% continuam com o seu código. Pode desligar quando quiser.</p></div><input type="checkbox" class="switch" name="apoio" aria-label="Apoiar com 2% dos links"></li>
+      </ul>
       <div class="savebar"><button class="btn filled" type="submit"><span class="ms">save</span>Salvar</button><button class="btn text" type="button" id="pr-testar"><span class="ms">send</span>Mandar post de teste</button><span class="muted small" id="pr-salvo"></span></div>
     </form>
+
+    <h3 class="painel-sec">Postar um cupom</h3>
+    <p class="muted small">Sai com a imagem da loja, no estilo escolhido. Um cupom por linha: <code>CODIGO descrição</code>.</p>
+    <form id="pr-cupom">
+      <div class="seg" id="pr-cupom-loja">
+        <label><input type="radio" name="loja" value="mercadolivre" checked>Mercado Livre</label>
+        <label><input type="radio" name="loja" value="amazon">Amazon</label>
+        <label><input type="radio" name="loja" value="shopee">Shopee</label>
+        <label><input type="radio" name="loja" value="aliexpress">AliExpress</label>
+      </div>
+      <label class="field ed-field"><textarea name="codigos" rows="3" placeholder=" " required></textarea><span>Cupons (ex.: MELIAGORA 10% OFF acima de R$ 199)</span></label>
+      <label class="field"><input name="link" placeholder=" " inputmode="url"><span>Link (opcional; sem link vai o da loja com o seu código)</span></label>
+      <div class="savebar"><button class="btn filled" type="submit"><span class="ms">confirmation_number</span>Postar cupom</button></div>
+      <p id="pr-cupom-msg" class="gal-dica" hidden></p>
+    </form>
+    <ul class="opcoes" id="pr-cupons-ativos"></ul>
 
     <h3 class="painel-sec">Postar uma oferta</h3>
     <p class="muted small">Cole o link de qualquer produto das 4 lojas: eu troco pelo seu link de afiliado e pego foto, nome e preço da página.</p>
@@ -398,6 +473,10 @@
         <label class="field"><input name="preco" placeholder=" " inputmode="decimal"><span>Preço (opcional)</span></label>
         <label class="field"><input name="precoAntigo" placeholder=" " inputmode="decimal"><span>Preço antigo (opcional)</span></label>
         <label class="field"><input name="cupom" placeholder=" "><span>Cupom (opcional)</span></label>
+      </div>
+      <div class="row">
+        <label class="field"><input name="lojaOficial" placeholder=" "><span>Loja oficial (opcional, ex.: Brastemp)</span></label>
+        <label class="field"><input name="obs" placeholder=" "><span>Detalhe do preço (opcional, ex.: No Pix)</span></label>
       </div>
       <label class="field"><input name="titulo" placeholder=" "><span>Título (opcional)</span></label>
       <label class="btn outlined" style="margin-top:8px"><span class="ms">add_photo_alternate</span><span id="pr-foto-txt">Foto do produto (opcional)</span><input type="file" name="foto" accept="image/*" hidden></label>

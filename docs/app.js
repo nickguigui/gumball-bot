@@ -153,14 +153,15 @@ $('#cx-login').addEventListener('submit', async e => {
 $$('.cx-voltar').forEach(b => b.addEventListener('click', () => { clearInterval(pollTimer); view('cx-numero'); }));
 
 const ESTADOS = { connected: ['Online', 'on'], reconnecting: ['Reconectando', ''], starting: ['Ligando', ''], offline: ['Desligado', 'off'], 'logged-out': ['Desconectado no celular', 'off'] };
-let grupos = [], atual = null, cmdCats = null;
+let grupos = [], atual = null, cmdCats = null, canaisPainel = [];
 async function openPanel() {
   try {
     const p = await api('/api/painel'); view('painel');
     $('#pn-num').textContent = p.nome ? `${p.nome} (${p.numero})` : p.numero;
     const [txt, cls] = ESTADOS[p.estado] || [p.estado, '']; $('#pn-estado').textContent = txt; $('#pn-estado').className = 'estado ' + cls;
     $('#pn-privado').checked = !!p.config.privateChats;
-    $('#pn-canais').innerHTML = p.canais.length ? p.canais.map(c => `<li><div><b>${esc(c.emoji || '📰')} ${esc(c.name || c.topic)}</b><p>${esc(c.topic)}${c.invite ? '' : '. Falta o link do canal.'}</p></div><button class="btn text" data-del="${esc(c.id)}">Remover</button></li>`).join('') : '<li><div><p>Nenhum canal ainda. Crie um sobre o assunto que quiser.</p></div></li>';
+    canaisPainel = p.canais;
+    $('#pn-canais').innerHTML = p.canais.length ? p.canais.map(c => `<li><div><b>${esc(c.emoji || '📰')} ${esc(c.name || c.topic)}</b><p>${esc(c.topic)}${c.grupo ? ` · no grupo ${esc(c.grupoNome || '')}` : c.invite ? ' · no canal' : '. Falta o link do canal.'}</p></div><button class="btn tonal small" data-post="${esc(c.id)}"><span class="ms">edit</span>Escrever post</button><button class="btn text" data-del="${esc(c.id)}">Remover</button></li>`).join('') : '<li><div><p>Nenhum canal ainda. Crie um sobre o assunto que quiser.</p></div></li>';
     loadGroups();
   } catch (err) {
     // servidor trocando de turno/reiniciando: a sessao continua valida, entao espera e tenta de novo
@@ -253,7 +254,7 @@ $('#g-ag-add').addEventListener('click', () => { const t = $('#g-ag-hora').value
 $('#pn-privado').addEventListener('change', async e => {
   try { await api('/api/config', { method: 'POST', body: { privateChats: e.target.checked } }); } catch (err) { e.target.checked = !e.target.checked; alert(err.message); }
 });
-$('#pn-canais').addEventListener('click', async e => { const id = e.target.dataset.del; if (id) { await api('/api/canais', { method: 'POST', body: { remover: id } }).catch(err => alert(err.message)); openPanel(); } });
+$('#pn-canais').addEventListener('click', async e => { const pb = e.target.closest('[data-post]'); if (pb) return abrirPost(pb.dataset.post); const id = e.target.dataset.del; if (id) { await api('/api/canais', { method: 'POST', body: { remover: id } }).catch(err => alert(err.message)); openPanel(); } });
 $('#pn-sair').addEventListener('click', async () => { await api('/api/sair', { method: 'POST' }).catch(() => {}); session = ''; store.set('gb-sessao', ''); view('cx-numero'); });
 $('#pn-desconectar').addEventListener('click', async () => {
   if (!confirm('Desconectar o bot do seu número e apagar seus dados do servidor? Não dá para desfazer.')) return;
@@ -277,6 +278,8 @@ const SLOTS = [
   ['mecore', '20:00', '🖤 Me core', 'Melancólico + alívio cômico'],
   ['jogo', '21:30', '🎮 Jogo da noite', 'Resposta escondida no "Ler mais"'],
   ['off', '23:30', 'CANAL OFF‼️', 'Fecha o dia'],
+  ['jogos', '09:30', '⚽ Jogos do dia', 'Só com liga de futebol escolhida'],
+  ['tabela', '22:30', '📊 Tabela do campeonato', 'Top 10 e zona de rebaixamento'],
   ['news', 'o dia todo', '📰 Notícias', 'Até 8 por dia'],
   ['videos', 'o dia todo', '🎬 Vídeos', 'Até 3 por dia'],
 ];
@@ -338,7 +341,24 @@ function makeQuiz() {
   const options = [...opts].sort(() => Math.random() - 0.5).map(String);
   return { pergunta: `Complete: "${s.replace(String(year), '____')}"`, opcoes: options, correta: options.indexOf(String(year)), explicacao: s };
 }
+const LIGAS = { brasileirao: ['bra.1', 'Brasileirão'], serieb: ['bra.2', 'Série B'], libertadores: ['conmebol.libertadores', 'Libertadores'], sulamericana: ['conmebol.sudamericana', 'Sul-Americana'], copadobrasil: ['bra.copa_do_brazil', 'Copa do Brasil'], champions: ['uefa.champions', 'Champions League'], premier: ['eng.1', 'Premier League'], laliga: ['esp.1', 'La Liga'], seriea: ['ita.1', 'Serie A (Itália)'], bundesliga: ['ger.1', 'Bundesliga'], ligue1: ['fra.1', 'Ligue 1'] };
+const liga = () => { const l = LIGAS[ctx.liga]; if (!l) throw new Error('escolha uma liga de futebol para ligar este post'); return l; };
 const BUILD = {
+  jogos: async () => {
+    const [cod, nome] = liga(); const { events = [] } = await (await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${cod}/scoreboard`)).json();
+    const hora = d => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const lista = events.slice(0, 10).map(e => { const t = e.competitions?.[0]?.competitors || []; const casa = t.find(x => x.homeAway === 'home'), fora = t.find(x => x.homeAway === 'away'); return `⚽ *${casa?.team?.shortDisplayName}* x *${fora?.team?.shortDisplayName}* — ${hora(e.date)}`; });
+    if (!lista.length) throw new Error('sem jogos hoje; no dia sem jogo o bot não posta');
+    return bubble(wa(`${E()} *_🗓️ JOGOS DE HOJE: ${nome.toUpperCase()}_*\n\n${lista.join('\n')}\n\n_Quem leva? Reage aí!_${sign()}`));
+  },
+  tabela: async () => {
+    const [cod, nome] = liga(); const d = await (await fetch(`https://site.api.espn.com/apis/v2/sports/soccer/${cod}/standings`)).json();
+    const en = (d.children?.[0]?.standings?.entries || []).map(x => ({ t: x.team.shortDisplayName || x.team.displayName, st: Object.fromEntries(x.stats.map(s => [s.name, s.displayValue])) })).sort((a, b) => +a.st.rank - +b.st.rank);
+    if (!en.length) throw new Error('tabela indisponível agora');
+    const med = i => ['🥇', '🥈', '🥉'][i] || `${i + 1}.`;
+    const z4 = en.length > 14 ? `\n\n🔻 *Zona de rebaixamento:* ${en.slice(-4).map(e => e.t).join(', ')}` : '';
+    return bubble(wa(`${E()} *_📊 TABELA: ${nome.toUpperCase()}_*\n\n${en.slice(0, 10).map((e, i) => `${med(i)} *${e.t}* — ${e.st.points} pts _(${e.st.gamesPlayed} j)_`).join('\n')}${z4}${sign()}`));
+  },
   on: async () => bubble(card('CANAL ON‼️', ctx.name) + wa(`${E()} *_CANAL ON‼️_*\n\nBom dia! Bora acompanhar tudo sobre *${ctx.topic}* hoje ✨${sign()}`)),
   off: async () => bubble(card('CANAL OFF‼️', ctx.name) + wa(`${E()} *_CANAL OFF‼️_*\n\nBoa noite! Amanhã tem mais 💤${sign()}`)),
   curiosidade: async () => { const s = pick(ctx.sents.filter(x => /\d/.test(x)).concat(ctx.sents)); if (!s) throw new Error('sem fatos na Wikipédia'); return bubble(wa(`${E()} *_🧠 CURIOSIDADE DO DIA_*\n\nVocê sabia? ${s}${sign()}`)); },
@@ -379,7 +399,7 @@ $('#canal-form').addEventListener('submit', async e => {
   if (ctx.wiki.image) ctx.imgs.unshift({ url: ctx.wiki.image, credit: 'Wikimedia Commons' });
   s = step('Montando a grade com uma prévia de cada post');
   $('#r-topic').textContent = ctx.topic;
-  $('#grade-body').innerHTML = SLOTS.map(([k, t, label, sub]) => `<li data-k="${k}"><div class="when">${t.includes(':') ? `<input type="time" value="${t}" aria-label="Horário de ${esc(label)}">` : `<small>${t}</small>`}</div><div class="kind"><b>${esc(label)}</b><small>${esc(sub)}</small></div><div class="preview" id="pv-${k}"><div class="msg in">gerando...</div></div><input type="checkbox" class="switch" aria-label="Ativar ${esc(label)}" ${k === 'musica' && !ctx.artist ? '' : 'checked'}></li>`).join('');
+  $('#grade-body').innerHTML = SLOTS.map(([k, t, label, sub]) => `<li data-k="${k}"><div class="when">${t.includes(':') ? `<input type="time" value="${t}" aria-label="Horário de ${esc(label)}">` : `<small>${t}</small>`}</div><div class="kind"><b>${esc(label)}</b><small>${esc(sub)}</small></div><div class="preview" id="pv-${k}"><div class="msg in">gerando...</div></div><input type="checkbox" class="switch" aria-label="Ativar ${esc(label)}" ${(k === 'musica' && !ctx.artist) || (['jogos', 'tabela'].includes(k) && !ctx.liga) || (ctx.iaDesligar || []).includes(k) ? '' : 'checked'}></li>`).join('');
   $$('#grade-body li').forEach(li => li.classList.toggle('off', !li.querySelector('.switch').checked));
   $('#canal-result').hidden = false;
   let ok = 0;
@@ -387,6 +407,8 @@ $('#canal-form').addEventListener('submit', async e => {
     try { $('#pv-' + k).innerHTML = await timeout(BUILD[k](), 30000); ok++; } catch (err) { $('#pv-' + k).innerHTML = bubble(wa(`_Prévia indisponível (${err.message}). No canal, o bot tenta de novo na hora do post._`)); }
   }
   done(s, true, `${ok} de ${SLOTS.length} prévias prontas. Confira a grade abaixo.`);
+  if (ctx.iaDestino) setDestino(ctx.iaDestino);
+  if (!$('#ch-cnome').value) $('#ch-cnome').value = ctx.name; if (!$('#ch-cdesc').value) $('#ch-cdesc').value = ctx.iaDescricao || `Tudo sobre ${ctx.topic}: curiosidades, notícias, enquetes e muito mais, todo dia ${E()}`;
   btn.disabled = false;
   $('#canal-result').scrollIntoView({ behavior: 'smooth' });
 });
@@ -396,10 +418,10 @@ function buildConfig() {
   const slots = {}, disabled = [];
   for (const li of $$('#grade-body li')) { const k = li.dataset.k, t = li.querySelector('input[type=time]'); if (t) slots[k] = t.value; if (!li.querySelector('.switch').checked) disabled.push(k); }
   const id = ctx.topic.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
-  return { id, name: ctx.name, topic: ctx.topic, query: ctx.topic, emoji: ctx.emoji, signature: ctx.signature || undefined, tone: ctx.tone, artist: ctx.artist || undefined, invite: $('#ch-invite').value.trim(), slots, disabled, news: !disabled.includes('news'), videos: !disabled.includes('videos'), dates: [], enabled: true };
+  return { id, name: ctx.name, topic: ctx.topic, query: ctx.topic, emoji: ctx.emoji, signature: ctx.signature || undefined, tone: ctx.tone, artist: ctx.artist || undefined, invite: destino() === 'canal' ? $('#ch-invite').value.trim() : '', grupo: destino() === 'grupo' ? $('#ch-grupo').value : undefined, grupoNome: destino() === 'grupo' ? $('#ch-grupo').selectedOptions[0]?.textContent : undefined, liga: ctx.liga || undefined, slots, disabled, news: !disabled.includes('news'), videos: !disabled.includes('videos'), dates: [], enabled: true };
 }
 $('#btn-approve').addEventListener('click', () => {
-  if (!/whatsapp\.com\/channel\//.test($('#ch-invite').value)) { $('#ch-invite').focus(); return; }
+  if (destino() === 'grupo' ? !$('#ch-grupo').value : !/whatsapp\.com\/channel\//.test($('#ch-invite').value)) { (destino() === 'grupo' ? $('#ch-grupo') : $('#ch-invite')).focus(); return; }
   $('#cfg-json').textContent = JSON.stringify(buildConfig(), null, 2); $('#approve-out').hidden = false;
 });
 $('#btn-copy').addEventListener('click', () => { navigator.clipboard?.writeText($('#cfg-json').textContent); $('#btn-copy').lastChild.textContent = 'Copiado'; });
@@ -411,5 +433,106 @@ $('#btn-github').addEventListener('click', async () => {
   catch (err) { btn.disabled = false; alert(err.message); }
 });
 
+// ---------- canal: IA grátis que configura tudo, destino canal/grupo, foto e criar canal ----------
+const destino = () => document.querySelector('#ch-destino input:checked')?.value || 'canal';
+function setDestino(v) {
+  for (const i of $$('#ch-destino input')) i.checked = i.value === v;
+  $('#dest-canal').hidden = v !== 'canal'; $('#dest-grupo').hidden = v !== 'grupo';
+  if (v === 'grupo') gruposDoSelect();
+}
+$('#ch-destino').addEventListener('change', () => setDestino(destino()));
+async function gruposDoSelect() {
+  const sel = $('#ch-grupo');
+  if (!session) { sel.innerHTML = '<option value="">Entre no painel primeiro (aba Conectar / Painel)</option>'; return; }
+  try {
+    if (!grupos.length) grupos = (await api('/api/grupos')).grupos;
+    sel.innerHTML = '<option value="">Escolha o grupo</option>' + grupos.map(g => `<option value="${esc(g.jid)}">${esc(g.nome || 'Grupo sem nome')}</option>`).join('');
+  } catch (err) { sel.innerHTML = `<option value="">${esc(err.message)}</option>`; }
+}
+
+$('#btn-ia').addEventListener('click', async () => {
+  const pedido = $('#ch-desc').value.trim(); const msg = $('#ia-msg'); if (!pedido) { $('#ch-desc').focus(); return; }
+  const btn = $('#btn-ia'); btn.disabled = true; msg.hidden = false; msg.textContent = 'A IA está pensando no seu canal...';
+  const tons = [...document.querySelectorAll('#canal-form [name=tone] option')].map(o => o.textContent);
+  /* o pedido para a IA fica no servidor (a IA grátis não aceita chamada direto do navegador) */
+  try {
+    const c = await timeout(api('/api/ia/canal', { method: 'POST', body: { pedido, tons, slots: SLOTS.map(x => x[0]), ligas: Object.keys(LIGAS) } }), 130000);
+    const f = $('#canal-form');
+    f.topic.value = String(c.topic || pedido).slice(0, 80); f.name.value = String(c.name || '').slice(0, 60); f.emoji.value = [...String(c.emoji || '💜')].slice(0, 2).join('');
+    f.signature.value = String(c.signature || '').slice(0, 40); f.artist.value = String(c.artist || '').slice(0, 60);
+    if (tons.includes(c.tone)) f.tone.value = c.tone;
+    f.liga.value = LIGAS[c.liga] ? c.liga : '';
+    ctx.iaDesligar = Array.isArray(c.desligar) ? c.desligar.filter(k => SLOTS.some(x => x[0] === k)) : [];
+    ctx.iaDestino = c.destino === 'grupo' ? 'grupo' : 'canal'; ctx.iaDescricao = String(c.descricao || '').slice(0, 500); ctx.iaFoto = String(c.foto || '').slice(0, 400);
+    $('#ch-cnome').value = f.name.value; $('#ch-cdesc').value = ctx.iaDescricao;
+    msg.textContent = `✓ Pronto: "${f.name.value || f.topic.value}"${f.liga.value ? ` com jogos e tabela do ${LIGAS[f.liga.value][1]}` : ''}, postando ${ctx.iaDestino === 'grupo' ? 'num grupo' : 'num canal'}. Montando a grade...`;
+    if (ctx.iaDestino === 'canal') gerarFoto();
+    f.requestSubmit();
+  } catch (err) { msg.textContent = `Não deu: ${err.message.replace(/\.$/, '')}.`; }
+  btn.disabled = false;
+});
+let fotoB64 = null;
+async function gerarFoto() {
+  const img = $('#ch-foto'), m = $('#ch-foto-msg'); m.textContent = 'Gerando a foto...';
+  const tema = ctx.iaFoto || `${$('#canal-form').topic.value || 'news'} themed colorful avatar, centered icon, vibrant`;
+  try {
+    const r = await timeout(api('/api/ia/foto', { method: 'POST', body: { prompt: tema } }), 100000);
+    fotoB64 = r.b64; img.src = `data:${r.tipo};base64,${r.b64}`; img.hidden = false;
+    m.textContent = 'Não gostou? Gere outra.';
+  } catch { fotoSimples(); m.textContent = 'A IA de imagem está ocupada, então fiz uma foto com o emoji. Toque em "Gerar foto" para tentar a da IA de novo.'; }
+}
+function fotoSimples() { // reserva: emoji num degrade, feito no proprio navegador
+  const c = document.createElement('canvas'); c.width = c.height = 640; const g = c.getContext('2d');
+  const h = [...(ctx.topic || 'x')].reduce((a, ch) => a + ch.codePointAt(0), 0) % 360;
+  const gr = g.createLinearGradient(0, 0, 640, 640); gr.addColorStop(0, `hsl(${h} 80% 55%)`); gr.addColorStop(1, `hsl(${(h + 50) % 360} 85% 35%)`);
+  g.fillStyle = gr; g.fillRect(0, 0, 640, 640); g.font = '320px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(E(), 320, 345);
+  const url = c.toDataURL('image/jpeg', 0.9); $('#ch-foto').src = url; $('#ch-foto').hidden = false; fotoB64 = url.split(',')[1];
+}
+$('#btn-foto').addEventListener('click', gerarFoto);
+$('#btn-criar').addEventListener('click', async () => {
+  const m = $('#criar-msg'); m.hidden = false;
+  if (!session) { m.textContent = 'Entre no painel primeiro (aba Conectar / Painel).'; return; }
+  const btn = $('#btn-criar'); btn.disabled = true; m.textContent = 'Criando o canal no WhatsApp...';
+  try {
+    const r = await api('/api/promos/criarcanal', { method: 'POST', body: { nome: $('#ch-cnome').value.trim() || ctx.name, descricao: $('#ch-cdesc').value, fotoB64, usarNoRobo: false } });
+    $('#ch-invite').value = r.invite; m.textContent = `✓ Canal "${r.nome}" criado! O link já está no campo acima. Agora toque em Aprovar.`;
+  } catch (err) { m.textContent = err.message; btn.disabled = false; }
+});
+
+// ---------- painel: escrever post (agora ou agendado) ----------
+let postId = null;
+const b64 = file => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(file); });
+async function encolher(file) { // fotos grandes do celular: reduz para caber no envio
+  const bmp = await createImageBitmap(file); const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return b64(await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85)));
+}
+function mostrarAgenda(l = []) {
+  $('#pp-agenda').innerHTML = l.length ? l.map(i => `<li><div><b>🕒 ${esc(new Date(i.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }))}${i.foto ? ' · 🖼️' : ''}</b><p>${esc(i.texto || '(só foto)')}</p></div><button type="button" class="btn text" data-desag="${i.em}">Cancelar</button></li>`).join('') : '';
+}
+async function abrirPost(id) {
+  postId = id; const c = canaisPainel.find(x => x.id === id); const f = $('#pn-post');
+  $('#pp-nome').textContent = c ? `${c.emoji || '📰'} ${c.name || c.topic}` : id; f.hidden = false; $('#pp-msg').hidden = true; f.texto.focus();
+  f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  try { mostrarAgenda((await api('/api/canais/agenda', { method: 'POST', body: { id } })).agenda); } catch { mostrarAgenda([]); }
+}
+$('#pp-fechar').addEventListener('click', () => { $('#pn-post').hidden = true; });
+$('#pn-post').addEventListener('submit', async e => {
+  e.preventDefault(); const f = e.target, m = $('#pp-msg'), btn = f.querySelector('[type=submit]'); m.hidden = false;
+  if (!f.texto.value.trim() && !f.foto.files[0]) { m.textContent = 'Escreva o post ou escolha uma foto.'; return; }
+  const em = f.em.value ? new Date(f.em.value).getTime() : 0;
+  if (em && em < Date.now()) { m.textContent = 'Esse horário já passou.'; return; }
+  btn.disabled = true; m.textContent = em ? 'Agendando...' : 'Postando...';
+  try {
+    const fotoB64 = f.foto.files[0] ? await encolher(f.foto.files[0]) : undefined;
+    const r = await api('/api/canais/post', { method: 'POST', body: { id: postId, texto: f.texto.value, fotoB64, em } });
+    m.textContent = r.agendado ? '✓ Agendado! Sai no horário escolhido.' : '✓ Postado!'; f.reset(); mostrarAgenda(r.agenda);
+  } catch (err) { m.textContent = err.message; }
+  btn.disabled = false;
+});
+$('#pp-agenda').addEventListener('click', async e => {
+  const b = e.target.closest('[data-desag]'); if (!b) return; b.disabled = true;
+  try { mostrarAgenda((await api('/api/canais/desagendar', { method: 'POST', body: { id: postId, em: +b.dataset.desag } })).agenda); } catch (err) { b.disabled = false; alert(err.message); }
+});
 // Site instalavel (app na tela inicial do celular)
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

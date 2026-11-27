@@ -151,6 +151,10 @@ function aplicarPromos(p, d, A) {
   if (d.fontes && typeof d.fontes === 'object') p.fontes = { shopee: d.fontes.shopee !== false, aliexpress: d.fontes.aliexpress !== false };
   if (d.emoji !== undefined) p.emoji = str(d.emoji, 8) || '🔥';
   if (d.assinatura !== undefined) p.assinatura = str(d.assinatura, 60);
+  if (['profissional', 'fofo'].includes(d.estilo)) p.estilo = d.estilo;
+  if (typeof d.datas === 'boolean') p.datas = d.datas;
+  if (typeof d.apoio === 'boolean') p.apoio = d.apoio;
+  if (d.cupons && typeof d.cupons === 'object') p.cupons = { auto: d.cupons.auto !== false, lojas: (Array.isArray(d.cupons.lojas) ? d.cupons.lojas : p.cupons?.lojas || []).filter(l => ['mercadolivre', 'amazon', 'shopee', 'aliexpress'].includes(l)) };
   if (Array.isArray(d.destinos)) p.destinos = d.destinos.slice(0, 30).map(x => x.tipo === 'canal'
     ? { tipo: 'canal', invite: str(x.invite, 200), nome: str(x.nome, 80) || 'Canal', jid: (p.destinos.find(o => o.invite === x.invite) || {}).jid }
     : { tipo: 'grupo', jid: str(x.jid, 60), nome: str(x.nome, 80) || 'Grupo' }).filter(x => x.tipo === 'canal' ? /whatsapp\.com\/channel\//.test(x.invite) : /@g\.us$/.test(x.jid));
@@ -223,7 +227,29 @@ if (MANAGED) {
             const f = P.fila(); f.push(o); P.setFila(f); return { naFila: f.length, oferta: o };
           }
           if (msg.type === 'promos-limpar') { P.setFila([]); return P.resumo(); }
+          if (msg.type === 'promos-cupom') {
+            const lista = String(msg.codigos || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const [codigo, ...d] = l.split(/\s+/); return { codigo: codigo.toUpperCase(), titulo: '', desc: d.join(' ').replace(/^[-–:]\s*/, '') }; }).filter(c => /^[A-Z0-9_-]{3,30}$/.test(c.codigo));
+            if (!lista.length) throw new Error('Escreva pelo menos um código (um por linha: CODIGO descrição).');
+            if (!['mercadolivre', 'amazon', 'shopee', 'aliexpress'].includes(msg.loja)) throw new Error('Escolha a loja.');
+            return { postado: await P.postarCupons(current, msg.loja, lista, { link: msg.link || undefined }), resumo: P.resumo() };
+          }
+          if (msg.type === 'promos-esgotou') return { postado: await P.postarEsgotados(current, [String(msg.codigo || '').toUpperCase()]), resumo: P.resumo() };
           if (msg.type === 'promos-criarcanal') return P.criarCanal(current, { nome: msg.nome, descricao: msg.descricao, foto: msg.fotoB64 ? Buffer.from(String(msg.fotoB64), 'base64') : null, usarNoRobo: msg.usarNoRobo !== false });
+        })().catch(e => ({ erro: e.message }));
+        tell({ type: 'reply', id: msg.id, data: r });
+      }
+      // Canal/grupo automatico: post escrito pela pessoa (agora ou agendado) e a agenda
+      if (msg.type?.startsWith('canal-')) {
+        const C = await import('./channels.js');
+        const r = await (async () => {
+          const ch = C.loadChannels().find(c => c.id === msg.idCanal); if (!ch) throw new Error('Canal não encontrado.');
+          if (msg.type === 'canal-post') {
+            const foto = msg.fotoB64 ? Buffer.from(String(msg.fotoB64), 'base64') : null;
+            if (msg.em && msg.em > Date.now() + 60_000) { C.agendar(ch, { em: msg.em, texto: String(msg.texto || '').slice(0, 4000), fotoB64: msg.fotoB64 || null }); return { agendado: true, agenda: C.agenda(ch) }; }
+            await C.postarTexto(current, ch, { texto: String(msg.texto || '').slice(0, 4000), foto }); return { postado: true, agenda: C.agenda(ch) };
+          }
+          if (msg.type === 'canal-agenda') return { agenda: C.agenda(ch) };
+          if (msg.type === 'canal-desagendar') { C.desagendar(ch, msg.em); return { agenda: C.agenda(ch) }; }
         })().catch(e => ({ erro: e.message }));
         tell({ type: 'reply', id: msg.id, data: r });
       }

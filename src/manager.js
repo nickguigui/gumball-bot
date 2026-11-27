@@ -158,6 +158,36 @@ async function promoAsk(req, msg, ms = 30_000) {
   return r.erro ? [400, r] : [200, r];
 }
 const ip = req =>(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+// IA gratis (Pollinations) pelo servidor: do navegador ela pede Turnstile. Limite por IP para nao virar proxy aberto.
+const iaUso = new Map();
+function iaLimite(req, max = 15) {
+  const k = ip(req), agora = Date.now(); const l = (iaUso.get(k) || []).filter(t => t > agora - 600_000);
+  if (l.length >= max) return false; l.push(agora); iaUso.set(k, l); if (iaUso.size > 5000) iaUso.clear(); return true;
+}
+const lista = (v, n = 40, t = 60) => (Array.isArray(v) ? v : []).slice(0, n).map(x => String(x).slice(0, t));
+async function iaCanal(b) {
+  const pedido = String(b.pedido || '').trim().slice(0, 400); if (!pedido) throw new Error('Descreva o que você quer.');
+  const tons = lista(b.tons, 10), slots = lista(b.slots, 30, 20), ligas = lista(b.ligas, 20, 20);
+  const sistema = `Você configura um bot que posta sozinho num canal ou grupo de WhatsApp. Responda SÓ com um JSON, sem texto fora dele, com as chaves:
+"topic" (assunto principal para pesquisar na Wikipédia, curto, ex.: "Clube de Regatas do Flamengo"), "name" (nome criativo do canal/grupo, até 40 letras), "emoji" (1 emoji), "signature" (assinatura curta ou ""), "artist" (artista/banda para a música do dia, ou "" se não fizer sentido), "tone" (exatamente um destes: ${tons.join(' | ')}), "liga" (uma destas chaves se for sobre futebol, senão "": ${ligas.join(', ')}), "destino" ("grupo" se a pessoa falou grupo, senão "canal"), "desligar" (lista de posts que NÃO combinam com o pedido, dentre: ${slots.join(', ')}), "descricao" (descrição do canal, 1 a 2 frases com emoji), "foto" (descrição em inglês de uma imagem quadrada para a foto do canal, sem texto escrito, sem logos nem marcas registradas).`;
+  for (let i = 0; i < 2; i++) {
+    const r = await fetch('https://text.pollinations.ai/openai', { method: 'POST', signal: AbortSignal.timeout(60_000), headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'openai', messages: [{ role: 'system', content: sistema }, { role: 'user', content: pedido }] }) }).catch(() => null);
+    if (!r?.ok) continue;
+    const t = (await r.json().catch(() => ({}))).choices?.[0]?.message?.content || ''; const m = t.match(/\{[\s\S]*\}/);
+    try { if (m) return JSON.parse(m[0]); } catch {}
+  }
+  throw new Error('A IA grátis está ocupada agora. Tente de novo em instantes.');
+}
+async function iaFoto(b) {
+  const prompt = String(b.prompt || '').trim().slice(0, 400); if (!prompt) throw new Error('Falta o assunto da foto.');
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + ', no text, square profile picture')}?width=640&height=640&nologo=true&seed=${Math.floor(Math.random() * 1e6)}`;
+  let r = await fetch(url, { signal: AbortSignal.timeout(90_000) }).catch(() => null);
+  // gratis: 1 imagem a cada 45 s por IP (o servidor e um IP so) -> espera o tempo pedido e tenta de novo
+  if (r?.status === 402 || r?.status === 429) { const s = +(/after (\d+)s/i.exec(await r.text().catch(() => '')) || [])[1] || 45; if (s <= 60) { await new Promise(ok => setTimeout(ok, (s + 1) * 1000)); r = await fetch(url, { signal: AbortSignal.timeout(90_000) }).catch(() => null); } }
+  if (!r?.ok || !/^image\//.test(r.headers.get('content-type') || '')) throw new Error('A foto não veio agora. Tente de novo.');
+  const buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 3_000_000) throw new Error('Foto grande demais.');
+  return { b64: buf.toString('base64'), tipo: r.headers.get('content-type') };
+}
 
 const routes = {
   // Diagnostico (so com a chave ADMIN_KEY do servidor): estado e log de um numero
@@ -303,6 +333,15 @@ const routes = {
   'POST /api/promos/testar': async (req) => promoAsk(req, { type: 'promos-testar' }, 60_000),
   'POST /api/promos/oferta': async (req) => { const b = await body(req, 1_500_000); /* pode vir com foto */ return promoAsk(req, { type: 'promos-oferta', url: b.url, extra: b.extra, agora: !!b.agora }, 60_000); },
   'POST /api/promos/limpar': async (req) => promoAsk(req, { type: 'promos-limpar' }),
+  // IA gratis para configurar o canal e gerar a foto (sem precisar estar conectado)
+  'POST /api/ia/canal': async (req) => { if (!iaLimite(req)) return [429, { erro: 'Muitos pedidos. Espere uns minutos.' }]; try { return [200, await iaCanal(await body(req, 8000))]; } catch (e) { return [502, { erro: e.message }]; } },
+  'POST /api/ia/foto': async (req) => { if (!iaLimite(req, 20)) return [429, { erro: 'Muitos pedidos. Espere uns minutos.' }]; try { return [200, await iaFoto(await body(req, 4000))]; } catch (e) { return [502, { erro: e.message }]; } },
+  // canal/grupo automatico: escrever post (agora ou agendado) e ver/cancelar a agenda
+  'POST /api/canais/post': async (req) => { const b = await body(req, 1_500_000); /* pode vir com foto */ return promoAsk(req, { type: 'canal-post', idCanal: b.id, texto: b.texto, fotoB64: b.fotoB64, em: +b.em || 0 }, 60_000); },
+  'POST /api/canais/agenda': async (req) => { const b = await body(req); return promoAsk(req, { type: 'canal-agenda', idCanal: b.id }); },
+  'POST /api/canais/desagendar': async (req) => { const b = await body(req); return promoAsk(req, { type: 'canal-desagendar', idCanal: b.id, em: +b.em }); },
+  'POST /api/promos/cupom': async (req) => { const b = await body(req); return promoAsk(req, { type: 'promos-cupom', loja: b.loja, codigos: b.codigos, link: b.link }, 60_000); },
+  'POST /api/promos/esgotou': async (req) => { const b = await body(req); return promoAsk(req, { type: 'promos-esgotou', codigo: b.codigo }, 60_000); },
   'POST /api/promos/criarcanal': async (req) => { const b = await body(req, 2_000_000); /* pode vir com foto */ return promoAsk(req, { type: 'promos-criarcanal', nome: b.nome, descricao: b.descricao, fotoB64: b.fotoB64, usarNoRobo: b.usarNoRobo }, 60_000); },
   // Galeria: denuncia de um pacote (3 pessoas diferentes escondem ate o dono da plataforma olhar)
   'POST /api/galeria/denunciar': async (req) => {

@@ -66,6 +66,7 @@ async function abrir() {
     atual = r; const f = $('#pr-form');
     f.ativo.checked = r.ativo; f.intervalo.value = String(r.intervalo); if (!f.intervalo.value) f.intervalo.value = '30';
     f.de.value = r.de; f.ate.value = r.ate; f.buscas.value = (r.buscas || []).join(', '); f.descontoMin.value = r.descontoMin; f.emoji.value = r.emoji || '🔥'; f.assinatura.value = r.assinatura || '';
+    for (const i of f.estilo) i.checked = i.value === (r.estilo || 'profissional'); f.datas.checked = r.datas !== false; f.cuponsAuto.checked = r.cupons?.auto !== false; f.apoio.checked = !!r.apoio; cuponsAtivos(r);
     f.amazon.value = r.lojas.amazon || ''; f.mercadolivre.value = ''; for (const n of ['shopeeAppId', 'shopeeSecret', 'aliAppKey', 'aliSecret', 'aliTracking']) f[n].value = '';
     marcados = new Set(r.destinos.filter(d => d.tipo === 'grupo').map(d => d.jid)); todos = false; $('#pr-busca').value = '';
     grupos = (g.grupos || []).filter(x => x.nome);
@@ -86,7 +87,7 @@ $('#pr-form').addEventListener('submit', async e => {
   if (f.aliAppKey.value.trim() || f.aliSecret.value.trim() || f.aliTracking.value.trim()) afiliados.aliexpress = { appKey: f.aliAppKey.value.trim(), secret: f.aliSecret.value.trim(), trackingId: f.aliTracking.value.trim() };
   if (f.ativo.checked && !destinos.length) { btn.disabled = false; return say('#pr-salvo', 'Escolha pelo menos um grupo ou canal antes de ligar.'); }
   try {
-    const { resumo: r } = await api('/api/promos', { method: 'POST', body: { ativo: f.ativo.checked, intervalo: +f.intervalo.value, de: f.de.value, ate: f.ate.value, buscas: f.buscas.value.split(',').map(s => s.trim()).filter(Boolean), descontoMin: +f.descontoMin.value || 0, emoji: f.emoji.value, assinatura: f.assinatura.value, destinos, afiliados } });
+    const { resumo: r } = await api('/api/promos', { method: 'POST', body: { ativo: f.ativo.checked, intervalo: +f.intervalo.value, de: f.de.value, ate: f.ate.value, buscas: f.buscas.value.split(',').map(s => s.trim()).filter(Boolean), descontoMin: +f.descontoMin.value || 0, emoji: f.emoji.value, assinatura: f.assinatura.value, destinos, afiliados, estilo: f.estilo.value, datas: f.datas.checked, apoio: f.apoio.checked, cupons: { auto: f.cuponsAuto.checked } } });
     atual = r; canais = r.destinos.filter(d => d.tipo === 'canal'); renderCanais(); status(r);
     for (const n of ['mercadolivre', 'shopeeAppId', 'shopeeSecret', 'aliAppKey', 'aliSecret', 'aliTracking']) f[n].value = '';
     say('#pr-salvo', 'Salvo ✓');
@@ -103,7 +104,7 @@ const num = v => { const s = String(v || '').replace(/[^\d,.]/g, ''); if (!s) re
 const msg = (t, ok) => { const m = $('#pr-oferta-msg'); m.innerHTML = t; m.hidden = !t; m.style.background = ok === false ? 'var(--error-container)' : ''; m.style.color = ok === false ? 'var(--on-error-container)' : ''; };
 $('#pr-oferta').addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target; const agora = e.submitter?.name === 'agora';
-  const extra = { preco: num(f.preco.value), precoAntigo: num(f.precoAntigo.value), cupom: f.cupom.value.trim() || undefined, titulo: f.titulo.value.trim() || undefined, imagemB64: f.foto.files[0] ? await fotoB64(f.foto.files[0]) : undefined };
+  const extra = { preco: num(f.preco.value), precoAntigo: num(f.precoAntigo.value), cupom: f.cupom.value.trim() || undefined, titulo: f.titulo.value.trim() || undefined, lojaOficial: f.lojaOficial.value.trim() || undefined, obs: f.obs.value.trim() || undefined, imagemB64: f.foto.files[0] ? await fotoB64(f.foto.files[0]) : undefined };
   msg(agora ? 'Postando…' : 'Colocando na fila…');
   try {
     const r = await api('/api/promos/oferta', { method: 'POST', body: { url: f.url.value.trim(), extra, agora } });
@@ -145,3 +146,18 @@ function contar() {
   $('#pr-n-grupos').textContent = marcados.size ? marcados.size : '';
   $('#pr-n-canais').textContent = canais.length ? canais.length : '';
 }
+
+// cupons: postar e marcar como esgotado
+function cuponsAtivos(r) {
+  const l = r.cuponsAtivos || [];
+  $('#pr-cupons-ativos').innerHTML = l.length ? l.slice().reverse().map(c => `<li><div><b>🎟️ ${esc(c.codigo)}</b><p>${esc({ mercadolivre: 'Mercado Livre', amazon: 'Amazon', shopee: 'Shopee', aliexpress: 'AliExpress' }[c.loja] || c.loja)}</p></div><button type="button" class="btn outlined small" data-esgotou="${esc(c.codigo)}"><span class="ms">block</span>Esgotou</button></li>`).join('') : '';
+}
+$('#pr-cupom').addEventListener('submit', async e => {
+  e.preventDefault(); const f = e.target; const m = $('#pr-cupom-msg'); m.hidden = false; m.textContent = 'Postando…';
+  try { const r = await api('/api/promos/cupom', { method: 'POST', body: { loja: f.loja.value, codigos: f.codigos.value, link: f.link.value.trim() } }); m.textContent = `✓ Postado em ${r.postado} destino(s).`; f.codigos.value = ''; f.link.value = ''; cuponsAtivos(r.resumo); }
+  catch (err) { m.textContent = err.message; }
+});
+$('#pr-cupons-ativos').addEventListener('click', async e => {
+  const b = e.target.closest('[data-esgotou]'); if (!b) return; b.disabled = true;
+  try { const r = await api('/api/promos/esgotou', { method: 'POST', body: { codigo: b.dataset.esgotou } }); cuponsAtivos(r.resumo); } catch (err) { b.disabled = false; alert(err.message); }
+});

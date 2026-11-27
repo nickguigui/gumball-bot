@@ -9,7 +9,7 @@ export const MENU = [
   ['𝗠𝗘𝗡𝗨 𝗣𝗥𝗜𝗡𝗖𝗜𝗣𝗔𝗟', [
     ['🤝 SUPORTE DO BOT', 'topcmd alugar teste suporte conectar bots'],
     ['🎨 FIGURINHAS & STICKERS', 'fig s editarfig qc attp ttp textofig emojimix toimg togif take rename wasted procurado preso rip smeme brat brat2 bratanimado bratbranco bratrosa bratpreto bratvinho bratazul redonda pacote addpacote limparpacote'],
-    ['🛒 PROMOÇÕES', 'promocoes promo afiliado afiliados comoafiliar criarcanal'],
+    ['🛒 PROMOÇÕES', 'promocoes promo cupom esgotou cupons afiliado afiliados comoafiliar criarcanal'],
     ['🖼️ EDIÇÃO DE FOTOS', 'grid logo sfundo placa mudarfundo desfoque pixel inverter cinza sepia espelho triste brilho contraste'],
     ['⬇️ DOWNLOADS', 'tkk ytmp3 play play2 ytmp4 playvideo ytsearch baixar insta face pin lyrics'],
     ['🎥 VÍDEO', 'videoreverso videolento videorapido cortarvideo letreiro'],
