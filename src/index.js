@@ -23,6 +23,7 @@ await loadCommands();
 if (!MANAGED) console.log(`✓ ${list.length} comandos carregados`);
 
 let retry = 0; let current = null;
+let lastUpsert = 0, watchdogKicks = 0; // vigia: conectado mas sem receber nada (buffer do Baileys preso)
 async function connect() {
   const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
   // versao atual do WhatsApp Web (a lista embutida no Baileys envelhece e o WhatsApp recusa o login)
@@ -69,6 +70,12 @@ async function connect() {
       tell({ type: 'connected', name: sock.user?.name || '' });
       if (config.pairNumber) publishPair({ status: 'conectado', at: Date.now() });
       startScheduler(sock);
+      // Vigia: o Baileys segura os eventos ate o WhatsApp avisar que mandou as pendentes. Se esse aviso
+      // nao chega, o bot fica conectado e surdo. Sem nenhuma mensagem: libera o buffer (90 s) e, se
+      // continuar mudo, reconecta (6 min; no maximo 3 vezes por processo).
+      const openedAt = Date.now();
+      setTimeout(() => { if (current === sock && lastUpsert < openedAt) { console.error('[vigia] sem mensagens 90 s após conectar: liberando o buffer'); try { sock.ev.flush(); } catch {} } }, 90_000).unref();
+      setTimeout(() => { if (current === sock && lastUpsert < openedAt && watchdogKicks < 3) { watchdogKicks++; console.error('[vigia] ainda sem mensagens: reconectando'); sock.end(new Error('vigia: sem mensagens')); } }, 6 * 60_000).unref();
     }
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode;
@@ -92,6 +99,7 @@ async function connect() {
   });
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    lastUpsert = Date.now();
     for (const m of messages) {
       // diagnostico sem conteudo: tipo, grupo/privado, se e seu, tipos de mensagem, falha de decifrar
       try {
