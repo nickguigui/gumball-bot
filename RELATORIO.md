@@ -133,6 +133,7 @@ Posta ofertas com o **seu** link de afiliado em grupos e canais. Nada de senha: 
 
 ## Criar canal e tutorial (27/11, noite)
 - **Criar canal pelo painel** (Robô de promoções › Onde postar › "Ainda não tem canal? Criar um agora"): foto, nome e descrição; o canal é criado no seu número e já entra no robô. No WhatsApp: `/criarcanal Nome | Descrição` como legenda de uma foto. `/apagarcanal <link> confirmar` apaga um canal seu.
-- O primeiro teste mostrou que o seu número ainda não aceitou os **termos de Canais do WhatsApp**; o bot agora aceita na hora de criar (avisado na tela). Ainda não criei canal de teste porque isso aceitaria os termos na sua conta: precisa do seu ok.
+- Teste ao vivo (com o seu ok): o WhatsApp recusou criar o canal pelo bot, mesmo enviando o aceite dos termos de Canais; ele devolve resposta vazia, sem motivo. Nenhum canal foi criado. Provável causa: o número precisa aceitar os termos de Canais uma vez pelo próprio app (Atualizações › + › Criar canal). Depois disso, o botão do painel e o /criarcanal devem funcionar; a mensagem de erro já explica isso.
+- Corrigido junto: depois de cada troca de servidor, o painel podia ficar até 5 min tentando o endereço antigo.
 - **Tutorial**: https://nickguigui.github.io/gumball-bot/afiliados.html (Amazon, Mercado Livre, Shopee, AliExpress: criar conta, gerar link na mão, chaves de API, ligar no Gumball e regras). Botão no painel e link no `/comoafiliar`.
 - Os posts agora avisam que é link de afiliado (a Amazon exige).
