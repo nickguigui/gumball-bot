@@ -8,7 +8,18 @@ import { tmpdir } from './media.js';
 import { UserError } from './http.js';
 
 const run = promisify(execFile);
-const base = () => ['--no-playlist', '--no-warnings', '--ffmpeg-location', config.ffmpeg, '--max-filesize', `${config.maxDownloadMB}M`];
+// Cookies de uma conta do YouTube (Secret YTDLP_COOKIES, formato Netscape ou base64): o YouTube bloqueia servidores sem login
+import { writeFileSync } from 'node:fs';
+import os from 'node:os';
+let cookieFile = null;
+try {
+  const raw = (process.env.YTDLP_COOKIES || '').trim();
+  if (raw) {
+    const txt = /^[A-Za-z0-9+/=\s]+$/.test(raw) && !raw.includes('\t') ? Buffer.from(raw, 'base64').toString('utf8') : raw;
+    cookieFile = path.join(os.tmpdir(), `yt-cookies-${process.pid}.txt`); writeFileSync(cookieFile, txt, { mode: 0o600 });
+  }
+} catch { cookieFile = null; }
+const base = () => ['--no-playlist', '--no-warnings', '--ffmpeg-location', config.ffmpeg, '--max-filesize', `${config.maxDownloadMB}M`, ...(cookieFile ? ['--cookies', cookieFile] : [])];
 
 export async function search(query, n = 1) {
   const { stdout } = await run(config.ytdlp, ['--dump-json', '--flat-playlist', '--no-warnings', `ytsearch${n}:${query}`], { maxBuffer: 32 << 20, timeout: 60000 });
@@ -32,7 +43,12 @@ async function download(target, args, wantExt) {
       console.error(`yt-dlp${extra.length ? ' (' + extra[1] + ')' : ''}: ${String(err.stderr || err.message).trim().split('\n').pop().slice(0, 250)}`);
       if (/max-filesize|larger than/i.test(err.stderr || '')) break;
     }
-    if (err) throw new UserError(/max-filesize|larger than/i.test(err.stderr || '') ? `Arquivo maior que ${config.maxDownloadMB} MB.` : 'Não consegui baixar esse conteúdo. Verifique o link ou tente outro.');
+    if (err) {
+      const e = err.stderr || '';
+      if (/max-filesize|larger than/i.test(e)) throw new UserError(`Arquivo maior que ${config.maxDownloadMB} MB.`);
+      if (yt && /not a bot|Sign in to confirm/i.test(e)) throw new UserError('🚫 O YouTube está bloqueando o servidor do bot agora (ele pede login). Tente de novo mais tarde.');
+      throw new UserError('Não consegui baixar esse conteúdo. Verifique o link ou tente outro.');
+    }
     const files = (await readdir(dir)).filter(f => f.startsWith('media.'));
     const file = files.find(f => !wantExt || f.endsWith('.' + wantExt)) || files[0];
     if (!file) throw new UserError('O download não gerou nenhum arquivo.');
