@@ -130,3 +130,9 @@ Posta ofertas com o **seu** link de afiliado em grupos e canais. Nada de senha: 
 - Ofertas automáticas: Shopee e AliExpress pelas APIs oficiais, sem repetir produto, as de maior desconto primeiro. Amazon e ML entram pelos links que você colar (a Amazon só libera a API de produtos depois das 3 primeiras vendas, e o ML não tem API de afiliado).
 - Testado ao vivo no grupo "Eu ;-;": converter link da Amazon, postar oferta com preço/desconto/cupom, postar pelo site com foto. As APIs da Shopee e do AliExpress foram chamadas de verdade e respondem; só falta a sua chave aprovada.
 - Banco de dados do Google: não foi preciso, as configurações ficam no servidor do Gumball, criptografadas.
+
+## Criar canal e tutorial (27/11, noite)
+- **Criar canal pelo painel** (Robô de promoções › Onde postar › "Ainda não tem canal? Criar um agora"): foto, nome e descrição; o canal é criado no seu número e já entra no robô. No WhatsApp: `/criarcanal Nome | Descrição` como legenda de uma foto. `/apagarcanal <link> confirmar` apaga um canal seu.
+- O primeiro teste mostrou que o seu número ainda não aceitou os **termos de Canais do WhatsApp**; o bot agora aceita na hora de criar (avisado na tela). Ainda não criei canal de teste porque isso aceitaria os termos na sua conta: precisa do seu ok.
+- **Tutorial**: https://nickguigui.github.io/gumball-bot/afiliados.html (Amazon, Mercado Livre, Shopee, AliExpress: criar conta, gerar link na mão, chaves de API, ligar no Gumball e regras). Botão no painel e link no `/comoafiliar`.
+- Os posts agora avisam que é link de afiliado (a Amazon exige).
