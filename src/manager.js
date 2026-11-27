@@ -151,6 +151,12 @@ function rawToFile(req, file, max) {
     req.on('error', fail);
   });
 }
+async function promoAsk(req, msg, ms = 30_000) {
+  const phone = auth(req); if (!phone) return [401, { erro: 'Entre de novo.' }];
+  const p = procs.get(phone); if (p?.state !== 'connected') return [409, { erro: 'O bot está ligando. Tente em alguns segundos.' }];
+  const r = await ask(p, msg, ms); if (!r) return [504, { erro: 'O bot não respondeu. Tente de novo.' }];
+  return r.erro ? [400, r] : [200, r];
+}
 const ip = req =>(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
 const routes = {
@@ -290,6 +296,13 @@ const routes = {
     if (!r) return [504, { erro: 'Demorou demais para montar. Tente um trecho menor.' }];
     return r.erro ? [400, r] : [200, r];
   },
+  // Robo de promocoes: o bot guarda e responde (as chaves secretas nunca voltam para o site)
+  'GET /api/promos': async (req) => promoAsk(req, { type: 'promos-get' }),
+  'POST /api/promos': async (req) => promoAsk(req, { type: 'promos-set', dados: await body(req) }),
+  'POST /api/promos/link': async (req) => promoAsk(req, { type: 'promos-link', url: (await body(req)).url }),
+  'POST /api/promos/testar': async (req) => promoAsk(req, { type: 'promos-testar' }, 60_000),
+  'POST /api/promos/oferta': async (req) => { const b = await body(req); return promoAsk(req, { type: 'promos-oferta', url: b.url, extra: b.extra, agora: !!b.agora }, 60_000); },
+  'POST /api/promos/limpar': async (req) => promoAsk(req, { type: 'promos-limpar' }),
   // Galeria: denuncia de um pacote (3 pessoas diferentes escondem ate o dono da plataforma olhar)
   'POST /api/galeria/denunciar': async (req) => {
     if (limited('den:' + ip(req), 10, 3600_000)) return [429, { erro: 'Denúncias demais. Tente mais tarde.' }];

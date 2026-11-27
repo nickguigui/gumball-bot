@@ -117,7 +117,8 @@ async function api(path, opts = {}) {
   return j;
 }
 window.gumballApi = (...a) => api(...a); // usado pela galeria (denuncias)
-const view = id => ['cx-numero', 'cx-parear', 'cx-entrar', 'painel', 'pn-grupo'].forEach(v => { $('#' + v).hidden = v !== id; });
+const view = id => ['cx-numero', 'cx-parear', 'cx-entrar', 'painel', 'pn-grupo', 'pn-promos'].forEach(v => { $('#' + v).hidden = v !== id; });
+window.gumballView = view; // usado pela tela de promocoes
 const showErr = (el, msg) => { $(el).textContent = msg; $(el).hidden = !msg; };
 let ticket = '', pollTimer = null;
 $('#cx-form').addEventListener('submit', async e => {

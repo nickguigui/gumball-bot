@@ -211,6 +211,11 @@
       <li><div><b>Responder no privado</b><p>Use os comandos nas conversas privadas, inclusive na conversa "Você". Só você consegue usar.</p></div><input type="checkbox" class="switch" id="pn-privado" aria-label="Responder no privado"></li>
     </ul>
 
+    <h3 class="painel-sec">Robô de promoções</h3>
+    <ul class="opcoes">
+      <li><div><b>Promoções com link de afiliado</b><p id="pn-promo-resumo">Amazon, Mercado Livre, Shopee e AliExpress, em grupos e canais.</p></div><button class="btn tonal" id="pn-promo-abrir"><span class="ms">sell</span>Configurar</button></li>
+    </ul>
+
     <h3 class="painel-sec">Canais automáticos</h3>
     <ul class="opcoes" id="pn-canais"></ul>
     <a class="btn tonal" href="#canal" data-tab="canal"><span class="ms">add</span>Criar canal automático</a>
@@ -301,6 +306,74 @@
     <div class="row"><label class="field"><input type="time" id="g-ag-hora" placeholder=" "><span>Horário</span></label><label class="field"><input id="g-ag-msg" placeholder=" "><span>Mensagem</span></label></div>
     <button type="button" class="btn tonal" id="g-ag-add" style="margin-top:8px"><span class="ms">schedule</span>Agendar</button>
   </div>
+
+  <!-- robo de promocoes -->
+  <div id="pn-promos" hidden>
+    <button class="btn text" id="pr-voltar"><span class="ms">arrow_back</span>Meu bot</button>
+    <h2 class="section-title" style="margin:8px 0 4px">Robô de promoções</h2>
+    <p class="muted" style="margin:0 0 8px">Posta ofertas com o <b>seu</b> link de afiliado. Ninguém precisa de senha: cada loja te dá um código no painel de afiliado, e você cola aqui.</p>
+
+    <form id="pr-form">
+      <ul class="opcoes">
+        <li><div><b>Robô ligado</b><p id="pr-status">Desligado</p></div><input type="checkbox" class="switch" name="ativo" aria-label="Robô ligado"></li>
+      </ul>
+
+      <h3 class="painel-sec">Onde postar</h3>
+      <p class="muted small">Grupos onde o seu número está. Para canal, o seu número precisa ser admin dele.</p>
+      <ul class="opcoes" id="pr-grupos"><li class="muted">Carregando seus grupos…</li></ul>
+      <ul class="opcoes" id="pr-canais"></ul>
+      <div class="row"><label class="field"><input id="pr-canal-link" placeholder=" " inputmode="url"><span>Link do canal (https://whatsapp.com/channel/…)</span></label><button type="button" class="btn tonal" id="pr-canal-add"><span class="ms">add</span>Adicionar canal</button></div>
+
+      <h3 class="painel-sec">Quando e o quê</h3>
+      <div class="row">
+        <label class="field"><select name="intervalo"><option value="10">A cada 10 min</option><option value="15">A cada 15 min</option><option value="20">A cada 20 min</option><option value="30">A cada 30 min</option><option value="45">A cada 45 min</option><option value="60">A cada 1 hora</option><option value="120">A cada 2 horas</option><option value="240">A cada 4 horas</option></select><span>Frequência</span></label>
+        <label class="field"><input type="time" name="de" placeholder=" "><span>Começa às</span></label>
+        <label class="field"><input type="time" name="ate" placeholder=" "><span>Para às</span></label>
+      </div>
+      <div class="row">
+        <label class="field"><input name="buscas" placeholder=" "><span>Buscar ofertas de (ex.: fone, air fryer, tênis)</span></label>
+        <label class="field" style="max-width:180px"><input type="number" name="descontoMin" min="0" max="90" placeholder=" "><span>Desconto mínimo (%)</span></label>
+      </div>
+      <div class="row">
+        <label class="field" style="max-width:120px"><input name="emoji" maxlength="8" placeholder=" "><span>Emoji</span></label>
+        <label class="field"><input name="assinatura" maxlength="60" placeholder=" "><span>Assinatura (ex.: Promos do Nick)</span></label>
+      </div>
+      <p class="muted small">As ofertas automáticas vêm da Shopee e do AliExpress (as APIs oficiais delas). Amazon e Mercado Livre entram pelos links que você colar em "Postar uma oferta".</p>
+
+      <h3 class="painel-sec">Suas lojas</h3>
+      <ul class="opcoes">
+        <li class="col"><div class="row-sw"><div><b>Amazon Associados</b><p id="pr-st-amazon">Não configurada</p></div></div>
+          <label class="field"><input name="amazon" placeholder=" " autocomplete="off"><span>Seu código de Associado (ex.: seucodigo-20)</span></label>
+          <details class="guia"><summary>Como conseguir</summary><ol><li>Entre em <a href="https://associados.amazon.com.br" target="_blank" rel="noopener">associados.amazon.com.br</a> e clique em Inscreva-se.</li><li>Informe onde vai divulgar (o seu canal ou grupo serve).</li><li>O código aparece no topo do painel, tipo <code>seunome-20</code>. Cole aqui.</li></ol></details></li>
+        <li class="col"><div class="row-sw"><div><b>Mercado Livre Afiliados</b><p id="pr-st-ml">Não configurada</p></div></div>
+          <label class="field"><input name="mercadolivre" placeholder=" " autocomplete="off" inputmode="url"><span>Cole um link de afiliado gerado no painel do ML</span></label>
+          <details class="guia"><summary>Como conseguir</summary><ol><li>Entre em <a href="https://www.mercadolivre.com.br/afiliados" target="_blank" rel="noopener">mercadolivre.com.br/afiliados</a> e cadastre-se.</li><li>No painel, gere o link de qualquer produto.</li><li>Abra esse link no navegador, copie o endereço <b>completo</b> (tem <code>matt_tool</code> e <code>matt_word</code>) e cole aqui. Eu uso o seu código em todos os links do ML.</li></ol></details></li>
+        <li class="col"><div class="row-sw"><div><b>Shopee Afiliados</b><p id="pr-st-shopee">Não configurada</p></div></div>
+          <div class="row"><label class="field"><input name="shopeeAppId" placeholder=" " autocomplete="off"><span>AppID</span></label><label class="field"><input name="shopeeSecret" type="password" placeholder=" " autocomplete="new-password"><span>Secret</span></label></div>
+          <details class="guia"><summary>Como conseguir</summary><ol><li>Cadastre-se em <a href="https://affiliate.shopee.com.br" target="_blank" rel="noopener">affiliate.shopee.com.br</a> e espere a aprovação.</li><li>No painel: <b>Open API</b> → pedir acesso. Depois de aprovado, copie o <b>AppID</b> e o <b>Secret</b>.</li><li>Cole aqui. O Secret fica guardado criptografado e nunca aparece de novo no site.</li></ol></details></li>
+        <li class="col"><div class="row-sw"><div><b>AliExpress Portals</b><p id="pr-st-ali">Não configurada</p></div></div>
+          <div class="row"><label class="field"><input name="aliAppKey" placeholder=" " autocomplete="off"><span>App Key</span></label><label class="field"><input name="aliSecret" type="password" placeholder=" " autocomplete="new-password"><span>App Secret</span></label><label class="field"><input name="aliTracking" placeholder=" " autocomplete="off"><span>Tracking ID</span></label></div>
+          <details class="guia"><summary>Como conseguir</summary><ol><li>Cadastre-se em <a href="https://portals.aliexpress.com" target="_blank" rel="noopener">portals.aliexpress.com</a>; o <b>Tracking ID</b> fica no painel.</li><li>Em <a href="https://openservice.aliexpress.com" target="_blank" rel="noopener">openservice.aliexpress.com</a>, crie um app do tipo afiliado e copie <b>App Key</b> e <b>App Secret</b>.</li><li>Cole os três aqui.</li></ol></details></li>
+      </ul>
+
+      <div class="savebar"><button class="btn filled" type="submit"><span class="ms">save</span>Salvar</button><button class="btn text" type="button" id="pr-testar"><span class="ms">send</span>Mandar post de teste</button><span class="muted small" id="pr-salvo"></span></div>
+    </form>
+
+    <h3 class="painel-sec">Postar uma oferta</h3>
+    <p class="muted small">Cole o link de qualquer produto das 4 lojas: eu troco pelo seu link de afiliado e pego foto, nome e preço da página.</p>
+    <form id="pr-oferta">
+      <label class="field"><input name="url" placeholder=" " inputmode="url" required><span>Link do produto</span></label>
+      <div class="row">
+        <label class="field"><input name="preco" placeholder=" " inputmode="decimal"><span>Preço (opcional)</span></label>
+        <label class="field"><input name="precoAntigo" placeholder=" " inputmode="decimal"><span>Preço antigo (opcional)</span></label>
+        <label class="field"><input name="cupom" placeholder=" "><span>Cupom (opcional)</span></label>
+      </div>
+      <label class="field"><input name="titulo" placeholder=" "><span>Título (opcional)</span></label>
+      <div class="savebar"><button class="btn filled" type="submit" name="fila"><span class="ms">playlist_add</span>Colocar na fila</button><button class="btn tonal" type="submit" name="agora"><span class="ms">bolt</span>Postar agora</button><button class="btn text" type="button" id="pr-converter"><span class="ms">link</span>Só converter o link</button></div>
+      <p id="pr-oferta-msg" class="gal-dica" hidden></p>
+    </form>
+    <p class="muted small" id="pr-fila"></p>
+  </div>
 </section>
 </main>
 
@@ -310,5 +383,6 @@
 </footer>
 <script src="app.js" type="module"></script>
 <script src="galeria.js" type="module"></script>
+<script src="promos.js" type="module"></script>
 </body>
 </html>

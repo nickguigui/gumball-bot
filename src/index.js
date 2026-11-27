@@ -130,6 +130,34 @@ const GROUP_KEYS = {
 };
 const pickGroupCfg = s => Object.fromEntries(Object.keys(GROUP_KEYS).filter(k => s[k] !== undefined && s[k] !== null).map(k => [k, s[k]]));
 
+
+// Configuracao de promocoes vinda do painel: so campos conhecidos; chave vazia = mantem a atual
+function aplicarPromos(p, d, A) {
+  const str = (v, n) => String(v ?? '').trim().slice(0, n);
+  if (typeof d.ativo === 'boolean') p.ativo = d.ativo;
+  if (Number.isFinite(+d.intervalo) && +d.intervalo >= 5) p.intervalo = Math.min(1440, Math.round(+d.intervalo));
+  for (const k of ['de', 'ate']) if (/^\d{2}:\d{2}$/.test(d[k] || '')) p[k] = d[k];
+  if (Number.isFinite(+d.descontoMin)) p.descontoMin = Math.max(0, Math.min(90, Math.round(+d.descontoMin)));
+  if (Array.isArray(d.buscas)) p.buscas = d.buscas.map(b => str(b, 60)).filter(Boolean).slice(0, 20);
+  if (d.fontes && typeof d.fontes === 'object') p.fontes = { shopee: d.fontes.shopee !== false, aliexpress: d.fontes.aliexpress !== false };
+  if (d.emoji !== undefined) p.emoji = str(d.emoji, 8) || '🔥';
+  if (d.assinatura !== undefined) p.assinatura = str(d.assinatura, 60);
+  if (Array.isArray(d.destinos)) p.destinos = d.destinos.slice(0, 30).map(x => x.tipo === 'canal'
+    ? { tipo: 'canal', invite: str(x.invite, 200), nome: str(x.nome, 80) || 'Canal', jid: (p.destinos.find(o => o.invite === x.invite) || {}).jid }
+    : { tipo: 'grupo', jid: str(x.jid, 60), nome: str(x.nome, 80) || 'Grupo' }).filter(x => x.tipo === 'canal' ? /whatsapp\.com\/channel\//.test(x.invite) : /@g\.us$/.test(x.jid));
+  const a = (p.afiliados = p.afiliados || {}), n = d.afiliados || {};
+  if (n.amazon !== undefined) { const t = str(n.amazon, 40); if (t && !/^[\w.-]+-2\d$/.test(t)) throw new Error('O código da Amazon termina com -20 (ex.: seucodigo-20).'); a.amazon = t; }
+  if (n.mercadolivre !== undefined) { const t = str(n.mercadolivre, 600); if (!t) delete a.mercadolivre; else { const c = A.mlCodigos(t); if (!c) throw new Error('Cole um link de afiliado do Mercado Livre com matt_tool/matt_word (o endereço completo).'); a.mercadolivre = c; } }
+  for (const [loja, campos] of [['shopee', ['appId', 'secret']], ['aliexpress', ['appKey', 'secret', 'trackingId']]]) {
+    const v = n[loja]; if (!v) continue;
+    if (v.remover) { delete a[loja]; continue; }
+    const cur = a[loja] || {};
+    for (const c of campos) { const t = str(v[c], 200); if (t) cur[c] = t; } // vazio = mantem
+    a[loja] = cur;
+  }
+  return p;
+}
+
 // ---------- comandos do gerenciador (IPC) ----------
 if (MANAGED) {
   process.on('message', async msg => {
@@ -171,6 +199,23 @@ if (MANAGED) {
         const { makeSticker } = await import('./lib/editor.js');
         const data = await makeSticker(current, msg.token, msg.opts).catch(e => ({ erro: e.message || 'Não consegui montar a figurinha.' }));
         tell({ type: 'reply', id: msg.id, data });
+      }
+      // Robo de promocoes (painel do site)
+      if (msg.type?.startsWith('promos-')) {
+        const P = await import('./promos.js'); const A = await import('./lib/afiliados.js');
+        const r = await (async () => {
+          if (msg.type === 'promos-get') return P.resumo();
+          if (msg.type === 'promos-set') return { resumo: P.resumo(P.savePromos(aplicarPromos(P.loadPromos(), msg.dados || {}, A))) };
+          if (msg.type === 'promos-link') return A.converter(String(msg.url || ''), P.loadPromos().afiliados);
+          if (msg.type === 'promos-testar') return { n: await P.postarOferta(current, { titulo: 'Teste do robô de promoções', preco: 99.9, precoAntigo: 149.9, desconto: 33, loja: 'Gumball', link: 'https://nickguigui.github.io/gumball-bot/' }) };
+          if (msg.type === 'promos-oferta') {
+            const o = await P.ofertaDoLink(String(msg.url || ''), msg.extra || {});
+            if (msg.agora) return { postada: await P.postarOferta(current, o), oferta: o };
+            const f = P.fila(); f.push(o); P.setFila(f); return { naFila: f.length, oferta: o };
+          }
+          if (msg.type === 'promos-limpar') { P.setFila([]); return P.resumo(); }
+        })().catch(e => ({ erro: e.message }));
+        tell({ type: 'reply', id: msg.id, data: r });
       }
       // aviso do servidor para o dono da plataforma (ex.: denuncia na galeria), na conversa "Voce"
       if (msg.type === 'avisar-dono') await current.sendMessage(jidNormalizedUser(current.user.id), { text: msg.text });

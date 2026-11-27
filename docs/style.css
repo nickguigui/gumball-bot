@@ -257,3 +257,10 @@ textarea:focus{outline:2px solid var(--primary);outline-offset:-1px}
 .brand{white-space:nowrap;flex-shrink:0}
 .gal-app{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 8px}.gal-app .gal-dica{flex-basis:100%;margin:0}
 [hidden]{display:none!important}
+/* robo de promocoes */
+details.guia{font-size:14px;color:var(--on-surface-var)}
+details.guia summary{cursor:pointer;color:var(--primary);font-weight:700;width:fit-content}
+details.guia ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+#pn-promos .row{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0}
+#pn-promos .row .field{flex:1;min-width:160px}
+#pn-promos .field select{appearance:auto}

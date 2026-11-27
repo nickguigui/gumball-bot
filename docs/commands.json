@@ -1,5 +1,5 @@
 {
- "total": 351,
+ "total": 356,
  "categories": [
   {
    "cat": "🤝 SUPORTE DO BOT",
@@ -44,6 +44,16 @@
     "pacote",
     "addpacote",
     "limparpacote"
+   ]
+  },
+  {
+   "cat": "🛒 PROMOÇÕES",
+   "cmds": [
+    "promocoes",
+    "promo",
+    "afiliado",
+    "afiliados",
+    "comoafiliar"
    ]
   },
   {

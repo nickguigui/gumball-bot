@@ -4,6 +4,7 @@ import { queue } from './queue.js';
 import { config } from './config.js';
 import { numId } from './lib/text.js';
 import { tickChannels } from './channels.js';
+import { tickPromos } from './promos.js';
 import { sentIds } from './context.js';
 import { generateMessageIDV2 } from 'baileys';
 
@@ -41,6 +42,7 @@ export function startScheduler(sock) {
           }
         }
       }
+      tickPromos(sock).catch(() => {}); // robo de promocoes (nao trava os outros)
       await tickChannels(sock);
     } catch (e) { console.error('scheduler:', e.message); }
   }, 30_000);
