@@ -72,5 +72,6 @@ Não era o PC. Quando o servidor trocava de turno (ou era reiniciado), ele volta
 ## Testado ao vivo e funcionando
 Grupo: menu, ping, medidores, piada, quiz, forca, bandeira, charada, daily, minerar, perfil, banco, rank, ativos, clima, traduzir, calcular, feriados, signo, conselho, fato, gpt, lyrics, filme, notícias, futebol, celular, ff, cep, ddd, qr, encurtar, ytsearch, falar, figurinha de vídeo e de foto (/s), TikTok, regras, enquete, lembrete, totag, painel, config. Privado: menu, cotação, piada, comandos de grupo explicam que só funcionam em grupo. Site: login com código, lista de grupos, salvar opção do grupo (refletiu no /painel do WhatsApp), canal automático, celular e computador.
 
-## Pendente (depende de você)
-- **/play e downloads do YouTube**: o YouTube bloqueia todos os servidores do GitHub ("confirme que não é um robô"). TikTok e outros funcionam. Para o YouTube voltar, é preciso cookies de uma conta do YouTube (de preferência uma conta secundária) guardados como Secret `YTDLP_COOKIES` — o bot já está pronto para usar.
+## YouTube (/play, /ytmp4) — resolvido
+O YouTube bloqueia os servidores do GitHub. Agora o bot usa os cookies da sua conta secundária (Secret `YTDLP_COOKIES`, fora do código) e o servidor instala o Deno (o yt-dlp precisa dele para os links do YouTube). Também corrigi o ffmpeg, que não era encontrado. Testado: `/play` por nome e por link mandam o áudio; `/ytmp4` manda o vídeo.
+Quando os cookies vencerem (semanas ou meses), o bot avisa "O YouTube está bloqueando o servidor": é só exportar de novo numa janela anônima e me passar o arquivo.
