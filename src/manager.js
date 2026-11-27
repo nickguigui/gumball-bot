@@ -51,7 +51,7 @@ function start(phone, { pairing = false } = {}) {
     ...process.env, MANAGED: '1',
     AUTH_DIR: path.join(d, 'auth'), DATA_DIR: path.join(d, 'data'), SETTINGS_FILE: settingsFile, CHANNELS_FILE: path.join(d, 'channels.json'),
     OWNER_NUMBERS: phone, OWNER_NAME: '', OWNER_ONLY: 'true', ALLOW_SELF: 'true', DEFAULT_BOT_ON: 'true',
-    PAIR_NUMBER: pairing ? phone : '', PORT: '', CI: '',
+    PAIR_NUMBER: pairing ? phone : '', PORT: '', CI: '', EDITOR_DIR,
   };
   const child = fork(BOT, [], { env, cwd: path.dirname(path.dirname(BOT)), execArgv: ['--no-warnings=ExperimentalWarning'], stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
   child.stdout.on('data', b => { const s = b.toString().trim(); if (s) { p.log?.push(`${new Date().toISOString().slice(11, 19)} ${s.slice(0, 300)}`); if (p.log?.length > 200) p.log.shift(); } });
@@ -150,7 +150,7 @@ const routes = {
     const k = url.searchParams.get('k') || '';
     if (!process.env.ADMIN_KEY || k.length !== process.env.ADMIN_KEY.length || !crypto.timingSafeEqual(Buffer.from(k), Buffer.from(process.env.ADMIN_KEY))) return [404, { erro: 'Não encontrado' }];
     const phone = normPhone(url.searchParams.get('tel')); const p = phone && procs.get(phone);
-    return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null, morto: phone ? dead.get(phone) || null : null, historico: phone ? (() => { try { return fs.readFileSync(path.join(ROOT, phone, 'diag.log'), 'utf8').trim().split('\n').slice(-Number(url.searchParams.get('n') || 120)); } catch { return []; } })() : [], instalacao: (() => { try { return fs.readFileSync('instalar.log', 'utf8').trim().split(String.fromCharCode(10)).slice(-5); } catch { return null; } })() }];
+    return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null, morto: phone ? dead.get(phone) || null : null, historico: phone ? (() => { try { return fs.readFileSync(path.join(ROOT, phone, 'diag.log'), 'utf8').trim().split('\n').slice(-Number(url.searchParams.get('n') || 120)); } catch { return []; } })() : [], editor: (() => { try { return { dir: EDITOR_DIR, links: fs.readdirSync(EDITOR_DIR).map(t => { try { const m = JSON.parse(fs.readFileSync(path.join(EDITOR_DIR, t, 'meta.json'), 'utf8')); return `${t.slice(0, 4)}… ${m.phone ? 'ok' : 'sem número'} ${Math.round((m.exp - Date.now()) / 60000)} min`; } catch (e) { return `${t.slice(0, 4)}… ${e.code || e.message}`; } }) }; } catch (e) { return { dir: EDITOR_DIR, erro: e.code }; } })(), instalacao: (() => { try { return fs.readFileSync('instalar.log', 'utf8').trim().split(String.fromCharCode(10)).slice(-5); } catch { return null; } })() }];
   },
   'GET /api/saude': async () => [200, { ok: true, numeros: Object.keys(reg.tenants).length, online: [...procs.values()].filter(p => p.state === 'connected').length }],
 
