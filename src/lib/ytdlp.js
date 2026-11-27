@@ -19,7 +19,7 @@ try {
     cookieFile = path.join(os.tmpdir(), `yt-cookies-${process.pid}.txt`); writeFileSync(cookieFile, txt, { mode: 0o600 });
   }
 } catch { cookieFile = null; }
-const base = () => ['--no-playlist', '--no-warnings', '--ffmpeg-location', config.ffmpeg, '--max-filesize', `${config.maxDownloadMB}M`, ...(cookieFile ? ['--cookies', cookieFile] : [])];
+const base = () => ['--no-playlist', '--no-warnings', ...(path.basename(config.ffmpeg) !== config.ffmpeg ? ['--ffmpeg-location', config.ffmpeg] : []) /* so nome ("ffmpeg"): o yt-dlp acha no PATH */, '--max-filesize', `${config.maxDownloadMB}M`, ...(cookieFile ? ['--cookies', cookieFile] : [])];
 
 export async function search(query, n = 1) {
   const { stdout } = await run(config.ytdlp, ['--dump-json', '--flat-playlist', '--no-warnings', `ytsearch${n}:${query}`], { maxBuffer: 32 << 20, timeout: 60000 });
