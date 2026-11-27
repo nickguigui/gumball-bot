@@ -77,7 +77,7 @@ export const commands = [
     },
   },
   {
-    name: 'jogodaforca', aliases: ['hangman'], category: CAT, react: '🪢', run: ctx => {
+    name: 'jogodaforca', aliases: ['hangman', 'jf'], category: CAT, react: '🪢', isActive: jid => games.get(jid)?.type === 'forca', run: ctx => {
       let g = games.get(ctx.jid);
       const draw = g2 => { const stages = ['😀', '😐', '😟', '😨', '😰', '😵', '💀']; return `${stages[g2.errors]} *FORCA* (${g2.errors}/6 erros)\n\n\`${[...g2.word].map(c => (g2.guessed.includes(c) ? c.toUpperCase() : '_')).join(' ')}\`\n\n🔤 Usadas: ${g2.guessed.join(', ').toUpperCase() || '—'}`; };
       if (ctx.q) {
@@ -94,7 +94,7 @@ export const commands = [
       if (g) return busy(ctx, g);
       g = { word: normalize(pick(C.forcaPalavras)), guessed: [], errors: 0 };
       startGame(ctx, 'forca', g, 10 * 60_000, () => ctx.send({ text: `⏰ Forca encerrada. A palavra era *${g.word.toUpperCase()}*.` }));
-      return ctx.reply(`${draw(games.get(ctx.jid))}\n\n📌 Chute uma letra: */jogodaforca a* ou a palavra inteira.`);
+      return ctx.reply(`${draw(games.get(ctx.jid))}\n\n📌 Chute uma letra: */forca a* (ou */jogodaforca a*) ou a palavra inteira.`);
     },
   },
   {

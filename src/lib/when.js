@@ -13,10 +13,10 @@ export function parseWhen(input) {
   const raw = input.trim(); const s = normalize(raw);
   let m, at = null, repeat = null, rest = raw;
   const cut = re => { const mm = raw.match(re); rest = mm ? raw.slice(mm.index + mm[0].length).trim() : raw; };
-  if ((m = s.match(/^(?:daqui a |em )?(\d+)\s*(segundos?|s|minutos?|min|m|horas?|h|dias?|d)\b/))) {
+  if ((m = s.match(/^(?:daqui a |daqui |em |dentro de )?(\d+)\s*(segundos?|seg|s|minutos?|mins?|m|horas?|hrs?|h|dias?|d)\b/))) {
     const n = +m[1]; const u = m[2][0];
     const ms = u === 's' ? n * 1000 : u === 'm' ? n * 60000 : u === 'h' ? n * 3600000 : n * 86400000;
-    at = new Date(Date.now() + ms); cut(/^(?:daqui a |em )?\d+\s*\S+/i);
+    at = new Date(Date.now() + ms); cut(/^(?:daqui a |daqui |em |dentro de )?\d+\s*\S+/i);
   } else if ((m = s.match(/^todos? os dias (?:as |a )?(\d{1,2})(?::|h)?(\d{2})?h?\b/))) {
     const l = localNow(); l.setHours(+m[1], +(m[2] || 0), 0, 0); if (l <= localNow()) l.setDate(l.getDate() + 1);
     at = toUtc(l); repeat = 'daily'; cut(/^todos? os dias (?:às |as |a )?\d{1,2}(?::|h)?(?:\d{2})?h?/i);

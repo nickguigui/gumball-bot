@@ -49,7 +49,9 @@ export async function handleMessage(sock, m) {
   const [rawCmd, ...args] = body.slice(config.prefix.length).trim().split(/\s+/);
   if (!rawCmd) return;
   const name = rawCmd.toLowerCase();
-  const cmd = registry.get(name);
+  let cmd = registry.get(name);
+  // /forca <letra> durante o jogo da forca = palpite (sem isso, /forca e o medidor de forca)
+  if (name === 'forca' && args.length && !/@/.test(args.join(' ')) && registry.get('jogodaforca')?.isActive?.(ctx.jid)) cmd = registry.get('jogodaforca');
   if (!cmd) { // comando desconhecido: silencio, exceto para o dono quando ha um parecido (erro de digitacao)
     if (config.ownerOnly && ctx.isOwner() && name.length >= 3 && /^[a-zà-ú0-9]+$/.test(name)) {
       const near = closest(name);
