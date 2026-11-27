@@ -1,0 +1,7 @@
+{
+  "appId": "io.github.nickguigui.gumball",
+  "appName": "Gumball Figurinhas",
+  "webDir": "www",
+  "server": { "url": "https://nickguigui.github.io/gumball-bot/?app=1#figurinhas", "allowNavigation": ["nickguigui.github.io", "*.trycloudflare.com", "raw.githubusercontent.com", "api.github.com"] },
+  "android": { "appendUserAgent": "GumballApp", "backgroundColor": "#0f1511" }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "gumball-figurinhas",
+  "private": true,
+  "version": "1.0.0",
+  "description": "App Android do Gumball: galeria de figurinhas e Adicionar ao WhatsApp",
+  "scripts": { "sync": "cap sync android", "apk": "cap sync android && cd android && gradlew.bat assembleDebug" },
+  "dependencies": { "@capacitor/android": "^8.6.2", "@capacitor/core": "^8.6.2" },
+  "devDependencies": { "@capacitor/cli": "^8.6.2" }
+}
