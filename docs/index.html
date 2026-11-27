@@ -11,6 +11,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Google+Sans+Flex:opsz,wdth,wght@6..144,25..151,400..900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gumball">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -72,6 +78,11 @@
   <div id="gal-lista">
     <h2 class="section-title" style="margin-top:16px">Figurinhas</h2>
     <p class="section-sub">Pacotes feitos por quem usa o Gumball. Baixe, mande pro seu WhatsApp ou adicione pelo app. Para publicar o seu, mande <code>/novopacote Nome</code> no WhatsApp.</p>
+    <div class="gal-app">
+      <a class="btn filled" id="baixar-apk" href="https://github.com/nickguigui/gumball-bot/releases/latest/download/gumball-figurinhas.apk" hidden><span class="ms">android</span>Baixar o app Android</a>
+      <button class="btn tonal" id="instalar" hidden><span class="ms">install_mobile</span>Instalar o app</button>
+      <p class="gal-dica" id="instalar-ios" hidden>No iPhone: toque em <span class="ms" style="vertical-align:-5px">ios_share</span> <b>Compartilhar</b> e depois em <b>Adicionar à Tela de Início</b>.</p>
+    </div>
     <div class="gal-bar">
       <label class="search"><span class="ms">search</span><input id="gal-busca" placeholder="Procurar pacote"></label>
       <div class="seg" id="gal-filtro">

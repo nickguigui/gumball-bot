@@ -407,3 +407,6 @@ $('#btn-github').addEventListener('click', async () => {
   try { await api('/api/canais', { method: 'POST', body: { canal: buildConfig() } }); btn.lastChild.textContent = 'Ativado! Começa em até 10 minutos'; }
   catch (err) { btn.disabled = false; alert(err.message); }
 });
+
+// Site instalavel (app na tela inicial do celular)
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

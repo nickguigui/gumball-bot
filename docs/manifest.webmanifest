@@ -1,0 +1,20 @@
+{
+  "name": "Gumball Bot · Figurinhas",
+  "short_name": "Gumball",
+  "description": "Figurinhas com som, editor e galeria de pacotes, e o bot de WhatsApp grátis no seu número.",
+  "lang": "pt-BR",
+  "start_url": "./?app=1#figurinhas",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1511",
+  "theme_color": "#006d3b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Galeria de figurinhas", "url": "./?app=1#figurinhas", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Meu painel", "url": "./?app=1#conectar", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

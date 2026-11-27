@@ -254,3 +254,5 @@ textarea:focus{outline:2px solid var(--primary);outline-offset:-1px}
 .gp-som .ms,.gp-dl .ms{font-size:18px}
 .gp-som.on{background:var(--primary);color:var(--on-primary)}
 .danger-link{color:var(--on-surface-var);margin-top:8px}
+.brand{white-space:nowrap;flex-shrink:0}
+.gal-app{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 8px}.gal-app .gal-dica{flex-basis:100%;margin:0}

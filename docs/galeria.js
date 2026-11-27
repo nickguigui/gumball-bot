@@ -112,3 +112,11 @@ window.galeriaRota = sub => {
 };
 // a aba pode ter sido aberta antes deste arquivo carregar
 const [t, sub] = location.hash.slice(1).split('/'); if (t === 'figurinhas') window.galeriaRota(sub || '');
+
+// Instalar: Android baixa o APK (adiciona pacotes no WhatsApp) ou instala o site; iPhone instala o site pela tela de inicio
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if (isAndroid && !inApp) $('#baixar-apk').hidden = false;
+let promptEvt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); promptEvt = e; if (!standalone && !inApp) $('#instalar').hidden = false; });
+$('#instalar').addEventListener('click', async () => { if (!promptEvt) return; promptEvt.prompt(); await promptEvt.userChoice.catch(() => {}); promptEvt = null; $('#instalar').hidden = true; });
+if (isIOS && !standalone) { $('#instalar').hidden = false; $('#instalar').onclick = () => { $('#instalar-ios').hidden = false; }; }
