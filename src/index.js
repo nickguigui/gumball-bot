@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 // GUMBALL BOT: um numero de WhatsApp. Roda sozinho (PC/Actions) ou gerenciado pelo
 // servidor (src/manager.js), que conversa com este processo por IPC.
 import './lib/soundsticker.js'; // figurinha com som: precisa entrar antes de qualquer mensagem
@@ -23,6 +24,12 @@ await loadCommands();
 if (!MANAGED) console.log(`✓ ${list.length} comandos carregados`);
 
 let retry = 0; let current = null;
+// Codigo de pareamento FIXO enquanto o processo vive: o WhatsApp fecha a conexao de pareamento depois
+// de ~1 min e o bot reconecta; antes isso gerava um codigo novo e o que a pessoa digitava no celular
+// (o antigo) dava erro. Agora o mesmo codigo vale em todas as reconexoes.
+const CROCKFORD = '123456789ABCDEFGHJKLMNPQRSTVWXYZ';
+let pairCode = null;
+const novoCodigo = () => Array.from(crypto.randomBytes(8), b => CROCKFORD[b % 32]).join('');
 let lastUpsert = 0, watchdogKicks = 0; // vigia: conectado mas sem receber nada (buffer do Baileys preso)
 async function connect() {
   const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
@@ -32,6 +39,7 @@ async function connect() {
     version, logger, auth: state,
     browser: Browsers.ubuntu('Chrome'),
     markOnlineOnConnect: false, syncFullHistory: false, generateHighQualityLinkPreview: false,
+    qrTimeout: 60_000, // pareamento: cada etapa vive 1 min (a conexao de pareamento dura ~6 min em vez de ~2)
   });
   current = sock;
 
@@ -48,7 +56,8 @@ async function connect() {
     if (qr && config.pairNumber && !pairingAsked && !sock.authState.creds.registered) {
       pairingAsked = true;
       try {
-        const code = (await sock.requestPairingCode(config.pairNumber)).match(/.{1,4}/g).join('-');
+        pairCode = pairCode || novoCodigo();
+        const code = (await sock.requestPairingCode(config.pairNumber, pairCode)).match(/.{1,4}/g).join('-');
         if (!MANAGED) console.log(`\n🔑 Código de pareamento: ${code}\n   WhatsApp > Aparelhos conectados > Conectar com número de telefone\n`);
         tell({ type: 'pair', code }); publishPair({ status: 'codigo', code, at: Date.now() });
       } catch (e) {

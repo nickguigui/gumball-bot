@@ -167,7 +167,7 @@ const routes = {
     const phone = normPhone(url.searchParams.get('tel')); const p = phone && procs.get(phone);
     return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null, morto: phone ? dead.get(phone) || null : null, historico: phone ? (() => { try { return fs.readFileSync(path.join(ROOT, phone, 'diag.log'), 'utf8').trim().split('\n').slice(-Number(url.searchParams.get('n') || 120)); } catch { return []; } })() : [], editor: (() => { try { return { dir: EDITOR_DIR, links: fs.readdirSync(EDITOR_DIR).map(t => { try { const m = JSON.parse(fs.readFileSync(path.join(EDITOR_DIR, t, 'meta.json'), 'utf8')); return `${t.slice(0, 4)}… ${m.phone ? 'ok' : 'sem número'} ${Math.round((m.exp - Date.now()) / 60000)} min`; } catch (e) { return `${t.slice(0, 4)}… ${e.code || e.message}`; } }) }; } catch (e) { return { dir: EDITOR_DIR, erro: e.code }; } })(), instalacao: (() => { try { return fs.readFileSync('instalar.log', 'utf8').trim().split(String.fromCharCode(10)).slice(-5); } catch { return null; } })() }];
   },
-  'GET /api/saude': async () => [200, { ok: true, numeros: Object.keys(reg.tenants).length, online: [...procs.values()].filter(p => p.state === 'connected').length }],
+  'GET /api/saude': async () => [200, { ok: true, numeros: Object.keys(reg.tenants).length, online: [...procs.values()].filter(p => p.state === 'connected').length, pareando: [...procs.values()].filter(p => p.state === 'pairing').length }],
 
   // 1) Entrar: numero nao conectado -> codigo de 8 letras; conectado -> codigo de entrada na conversa "Voce"
   'POST /api/entrar': async (req) => {
