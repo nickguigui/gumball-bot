@@ -84,10 +84,13 @@ jobs:
           trap 'kill -TERM $SRV 2>/dev/null; sleep 3; salvar; exit 0' INT TERM
 
           # ffmpeg + yt-dlp em paralelo (o servidor ja atende enquanto instala)
-          ( sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu fonts-noto-color-emoji > /dev/null
+          ( for i in 1 2 3; do sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu fonts-noto-color-emoji > /dev/null && break; echo "apt falhou ($i)"; sleep 20; done
+            # reserva: ffmpeg pronto (estatico) se o apt nao instalou
+            command -v ffmpeg >/dev/null || { curl -sL https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar xJ -C /tmp && sudo cp /tmp/ffmpeg-*-static/ffmpeg /tmp/ffmpeg-*-static/ffprobe /usr/local/bin/; }
             sudo curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp
             # o yt-dlp precisa de um interpretador JavaScript (Deno) para decifrar os links do YouTube
-            curl -fsSL https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip -o /tmp/deno.zip && sudo unzip -oq /tmp/deno.zip -d /usr/local/bin && sudo chmod +x /usr/local/bin/deno ) &
+            curl -fsSL https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip -o /tmp/deno.zip && sudo unzip -oq /tmp/deno.zip -d /usr/local/bin && sudo chmod +x /usr/local/bin/deno
+            echo "ferramentas: ffmpeg=$(command -v ffmpeg) yt-dlp=$(command -v yt-dlp) deno=$(command -v deno)" ) > instalar.log 2>&1 &
 
           npm run server > servidor.log 2>&1 &
           SRV=$!

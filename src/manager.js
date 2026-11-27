@@ -132,7 +132,7 @@ const routes = {
     const k = url.searchParams.get('k') || '';
     if (!process.env.ADMIN_KEY || k.length !== process.env.ADMIN_KEY.length || !crypto.timingSafeEqual(Buffer.from(k), Buffer.from(process.env.ADMIN_KEY))) return [404, { erro: 'Não encontrado' }];
     const phone = normPhone(url.searchParams.get('tel')); const p = phone && procs.get(phone);
-    return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null, morto: phone ? dead.get(phone) || null : null, historico: phone ? (() => { try { return fs.readFileSync(path.join(ROOT, phone, 'diag.log'), 'utf8').trim().split('\n').slice(-Number(url.searchParams.get('n') || 120)); } catch { return []; } })() : [] }];
+    return [200, { procs: [...procs.entries()].map(([ph, x]) => ({ num: mask(ph), state: x.state, code: !!x.code, since: x.startedAt })), alvo: p ? { state: p.state, error: p.error, log: p.log } : null, morto: phone ? dead.get(phone) || null : null, historico: phone ? (() => { try { return fs.readFileSync(path.join(ROOT, phone, 'diag.log'), 'utf8').trim().split('\n').slice(-Number(url.searchParams.get('n') || 120)); } catch { return []; } })() : [], instalacao: (() => { try { return fs.readFileSync('instalar.log', 'utf8').trim().split(String.fromCharCode(10)).slice(-5); } catch { return null; } })() }];
   },
   'GET /api/saude': async () => [200, { ok: true, numeros: Object.keys(reg.tenants).length, online: [...procs.values()].filter(p => p.state === 'connected').length }],
 
