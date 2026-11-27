@@ -114,7 +114,7 @@ export const commands = [
 🏷️ Desconto mínimo: *${r.descontoMin}%* · 🔎 Buscas: ${r.buscas.length ? r.buscas.join(', ') : '_mais vendidos_'}
 📥 Fila manual: ${r.fila}
 🔑 Lojas: ${['amazon', 'mercadolivre', 'shopee', 'aliexpress'].map(k => `${r.lojas[k] ? '✅' : '❌'} ${LOJAS[k]}`).join(' · ')}${r.erro && Date.now() - r.erro.em < 6 * 3600e3 ? `\n⚠️ Último erro (${r.erro.fonte}): ${r.erro.msg}` : ''}\n
-*Comandos:* /promocoes ligar|desligar · aqui · canal <link> · remover <n> · intervalo <min> · horario 08:00-22:00 · busca fone, air fryer · desconto 20 · assinatura · fila · limpar · testar
+*Comandos:* /promocoes ligar|desligar · aqui · canal <link> · remover <n> · intervalo <min> · horario 08:00-22:00 · busca fone, air fryer · desconto 20 · assinatura · fila · limpar · testar · estilo profissional|fofo · datas on|off · cupons on|off · apoio on|off
 /promo <link> · /afiliado <link> · /afiliados · /comoafiliar
 💻 Ou tudo pelo site: ${SITE}`);
     },

@@ -429,7 +429,7 @@ $('#btn-github').addEventListener('click', async () => {
   const btn = $('#btn-github');
   if (!session) { alert('Entre no painel primeiro (aba Conectar / Painel). Depois volte aqui e toque de novo.'); return; }
   btn.disabled = true;
-  try { await api('/api/canais', { method: 'POST', body: { canal: buildConfig() } }); btn.lastChild.textContent = 'Ativado! Começa em até 10 minutos'; }
+  try { await api('/api/canais', { method: 'POST', body: { canal: buildConfig() } }); btn.lastChild.textContent = 'Ativado! Começa em até 10 minutos'; openPanel().catch(() => {}); }
   catch (err) { btn.disabled = false; alert(err.message); }
 });
 
