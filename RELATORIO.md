@@ -137,3 +137,9 @@ Posta ofertas com o **seu** link de afiliado em grupos e canais. Nada de senha: 
 - Corrigido junto: depois de cada troca de servidor, o painel podia ficar até 5 min tentando o endereço antigo.
 - **Tutorial**: https://nickguigui.github.io/gumball-bot/afiliados.html (Amazon, Mercado Livre, Shopee, AliExpress: criar conta, gerar link na mão, chaves de API, ligar no Gumball e regras). Botão no painel e link no `/comoafiliar`.
 - Os posts agora avisam que é link de afiliado (a Amazon exige).
+
+## Figurinha de foto/vídeo que não é quadrado (27/11, noite)
+- `/s` numa foto ou vídeo que não é quadrado manda um link para escolher vendo a mídia: **Recortar** (um quadrado que você arrasta e redimensiona pelo canto), **Esticar** (a imagem inteira esticada) ou **Inteira** (do jeito que está, com bordas transparentes). Vídeo já vem com o som dele.
+- Atalhos sem link: `/s recortar` (o centro), `/s esticar`, `/s inteira`.
+- O mesmo seletor está no editor (`/editarfig`), no painel "Enquadrar".
+- Testado: recorte e esticar de vídeo vertical e foto deitada no servidor de teste (a figurinha saiu exatamente com o pedaço escolhido); ao vivo no grupo "Eu ;-;": `/s` com vídeo vertical mandou o link (que abre direto no recorte) e `/s esticar` gerou a figurinha.
