@@ -85,7 +85,9 @@ jobs:
 
           # ffmpeg + yt-dlp em paralelo (o servidor ja atende enquanto instala)
           ( sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu fonts-noto-color-emoji > /dev/null
-            sudo curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp ) &
+            sudo curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp
+            # o yt-dlp precisa de um interpretador JavaScript (Deno) para decifrar os links do YouTube
+            curl -fsSL https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip -o /tmp/deno.zip && sudo unzip -oq /tmp/deno.zip -d /usr/local/bin && sudo chmod +x /usr/local/bin/deno ) &
 
           npm run server > servidor.log 2>&1 &
           SRV=$!
