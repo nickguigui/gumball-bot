@@ -22,6 +22,10 @@ export const DAILY_LIMITS = { news: 8, videos: 3, releases: 2 };
 export const LER_MAIS = '‎'.repeat(4001);
 let lastPostAt = 0; let busy = false;
 
+export function saveChannels(list) {
+  let doc = {}; try { doc = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch {}
+  fs.writeFileSync(FILE, JSON.stringify({ ...doc, channels: list }, null, 1));
+}
 export function loadChannels() { try { return JSON.parse(fs.readFileSync(FILE, 'utf8')).channels || []; } catch { return []; } }
 const now = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: config.timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value])); return { day: `${p.year}-${p.month}-${p.day}`, min: +p.hour * 60 + +p.minute, md: `${p.day}/${p.month}` }; };
 const toMin = s => { const [h, m] = String(s).split(':').map(Number); return h * 60 + (m || 0); };

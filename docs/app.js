@@ -28,7 +28,10 @@ function show(tab, animate = true) {
   window.scrollTo({ top: 0 });
 }
 document.addEventListener('click', e => { const a = e.target.closest('[data-tab]'); if (a) { e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.tab); show(a.dataset.tab); } });
-show(['inicio', 'comandos', 'canal', 'conectar'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio', false);
+const TABS = ['inicio', 'comandos', 'canal', 'conectar'];
+show(TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio', false);
+// link direto (#canal) e botao voltar do navegador tambem trocam de aba
+addEventListener('hashchange', () => { const t = location.hash.slice(1); if (TABS.includes(t)) show(t); });
 addEventListener('scroll', () => $('#top').classList.toggle('scrolled', scrollY > 4), { passive: true });
 
 // ---------- playground: cada categoria mostra uma conversa de verdade ----------
@@ -280,7 +283,9 @@ function sentences(text) {
   return body.split('\n').filter(l => l.length > 80 && /[.!?]$/.test(l.trim()) && !/^=+/.test(l)) // so paragrafos de verdade
     .join(' ').split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ"“])/)
     .map(s => s.replace(/\s*\([^)]*(:|\[|pinyin|IPA)[^)]*\)/g, '').replace(/\s{2,}/g, ' ').trim())
-    .filter(s => s.length > 60 && s.length < 240 && !/[{}|[\]]|\bISBN\b|\(\s*\)|;.*;/.test(s));
+    .filter(s => s.length > 60 && s.length < 240 && !/[{}|[\]]|\bISBN\b|\(\s*\)|;.*;/.test(s))
+    // frases que dependem da anterior ("Já os...", "Posteriormente...", "Ele...") ficam sem sentido sozinhas
+    .filter(s => !/^(Já|Mas|Porém|Contudo|Entretanto|No entanto|Também|Além disso|Assim|Então|Posteriormente|Depois|Ainda|Isso|Isto|Esse|Essa|Este|Esta|Ele|Ela|Eles|Elas|Seu|Sua|Seus|Suas|Nele|Nela|Lá|Aqui|Todavia|Portanto|Logo|Desde então|However|But|Also|This|These|He|She|They|It|His|Her|Their|Later|Afterwards)\b/.test(s));
 }
 function jsonp(url) {
   return new Promise((res, rej) => {
@@ -303,7 +308,8 @@ const card = (title, sub) => `<div style="background:var(--primary-container);co
 const hiddenAnswer = ans => `${wa('🤫 _Pensou? Não vale trapacear! A resposta tá escondida aqui embaixo_ 👇')}<br><span class="readmore" onclick="this.nextElementSibling.classList.add('show');this.remove()">Ler mais</span><div class="hidden-answer">${wa('\n> ✔️ ' + ans)}</div>`;
 
 function makeQuiz() {
-  const withYear = ctx.sents.filter(s => /\b(19|20)\d{2}\b/.test(s));
+  // frase curta com um ano so (pergunta legivel na enquete, que corta em 255 caracteres)
+  const withYear = ctx.sents.filter(s => s.length < 170 && (s.match(/\b(19|20)\d{2}\b/g) || []).length === 1);
   const s = withYear.length ? pick(withYear) : null; if (!s) return null;
   const year = +s.match(/\b(19|20)\d{2}\b/)[0];
   const maxY = new Date().getFullYear(); const opts = new Set([year]);
@@ -315,7 +321,7 @@ const BUILD = {
   on: async () => bubble(card('CANAL ON‼️', ctx.name) + wa(`${E()} *_CANAL ON‼️_*\n\nBom dia! Bora acompanhar tudo sobre *${ctx.topic}* hoje ✨${sign()}`)),
   off: async () => bubble(card('CANAL OFF‼️', ctx.name) + wa(`${E()} *_CANAL OFF‼️_*\n\nBoa noite! Amanhã tem mais 💤${sign()}`)),
   curiosidade: async () => { const s = pick(ctx.sents.filter(x => /\d/.test(x)).concat(ctx.sents)); if (!s) throw new Error('sem fatos na Wikipédia'); return bubble(wa(`${E()} *_🧠 CURIOSIDADE DO DIA_*\n\nVocê sabia? ${s}${sign()}`)); },
-  data: async () => bubble(wa(`${E()} *_🎂 DATA ESPECIAL_*\n\n_Cadastre datas (aniversários, lançamentos) depois de aprovar, no campo "dates" do channels.json. Ex.: {"date":"13/12","text":"Aniversário!"}_`)),
+  data: async () => bubble(wa(`${E()} *_🎂 DATA ESPECIAL_*\n\nHoje é dia de comemorar! 🎉${sign()}`) + `<p class="muted" style="margin:8px 0 0;font-size:13px">Só sai nos dias que você cadastrar. Depois de ativar, mande no WhatsApp: <b>/canaldata 13/12 Aniversário!</b> (com ano, ex. 05/03/2027, vira contagem regressiva).</p>`),
   musica: async () => {
     if (!ctx.artist) return bubble(wa('_Sem artista definido: este post fica desligado. Preencha o campo do artista para ativar._'));
     const s = await jsonp(`https://api.deezer.com/search/artist?q=${encodeURIComponent(ctx.artist)}&limit=1`); const id = s.data?.[0]?.id; if (!id) throw new Error('artista não encontrado no Deezer');
