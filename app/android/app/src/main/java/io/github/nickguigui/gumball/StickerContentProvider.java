@@ -68,6 +68,11 @@ public class StickerContentProvider extends ContentProvider {
         }
     }
 
+    // alguns leitores pedem o arquivo por openFile em vez de openAssetFile: atende os dois
+    @Override public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
+        return openAssetFile(uri, mode).getParcelFileDescriptor();
+    }
+
     @Override public AssetFileDescriptor openAssetFile(Uri uri, String mode) throws FileNotFoundException {
         if (m.match(uri) != ASSET) throw new FileNotFoundException(uri.toString());
         List<String> seg = uri.getPathSegments(); // stickers_asset, id, arquivo
