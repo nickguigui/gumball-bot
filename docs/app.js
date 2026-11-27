@@ -94,6 +94,8 @@ async function apiBase(force) {
   if (API && !force) return API;
   // raw.githubusercontent nao tem limite por IP (a API do GitHub tem 60/hora, pouco para quem usa 4G); a API fica de reserva
   const tries = [`https://raw.githubusercontent.com/${REPO}/main/endpoint.json?t=${Date.now()}`, `https://api.github.com/repos/${REPO}/contents/endpoint.json?ref=main`];
+  // endereco antigo parou de responder: o raw pode estar em cache (ate 5 min), entao pergunta primeiro a API do GitHub
+  if (force) tries.reverse();
   let j = null;
   for (const u of tries) {
     const r = await fetch(u, { headers: u.includes('api.github') ? { Accept: 'application/vnd.github.raw+json' } : {}, cache: 'no-store' }).catch(() => null);
@@ -109,7 +111,7 @@ async function api(path, opts = {}) {
   // se o endereco antigo parou de responder, busca o novo uma vez
   const go = b => fetch(b + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session}` } : {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
   let r = await go(base).catch(() => null);
-  if (!r || r.status === 530 || r.status === 502) { base = await apiBase(true); r = await go(base).catch(() => null); }
+  if (!r || [502, 530].includes(r.status)) { const old = base; base = await apiBase(true); if (base !== old || !r) r = await go(base).catch(() => null); }
   if (!r) throw new Error('Não consegui falar com o servidor. Confira sua internet e tente de novo.');
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && path === '/api/painel') { session = ''; store.set('gb-sessao', ''); }

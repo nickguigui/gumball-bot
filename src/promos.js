@@ -117,7 +117,7 @@ export async function criarCanal(sock, { nome, descricao, foto, usarNoRobo = tru
   const aceitarTermos = () => sock.query({ tag: 'iq', attrs: { to: 's.whatsapp.net', xmlns: 'tos', id: sock.generateMessageTag(), type: 'set' }, content: [{ tag: 'notice', attrs: { id: '20601218', stage: '5' }, content: [] }] }).catch(e => console.error('[canal] termos:', e.message));
   let c;
   try { c = await sock.newsletterCreate(nome, descricao || null).catch(async e => { if (!/null|unexpected response/i.test(e.message)) throw e; await aceitarTermos(); return sock.newsletterCreate(nome, descricao || null); }); }
-  catch (e) { throw new Error(/terms|tos|not.?allowed|forbidden|403|401/i.test(e.message) ? 'O WhatsApp ainda não liberou criar canais neste número. Abra o WhatsApp no celular › Atualizações › + › Criar canal, aceite os termos uma vez e tente de novo.' : `O WhatsApp não criou o canal: ${e.message}`); }
+  catch (e) { throw new Error(/terms|tos|not.?allowed|forbidden|403|401|null|unexpected response/i.test(e.message) ? 'O WhatsApp ainda não liberou criar canais neste número. Abra o WhatsApp no celular › Atualizações › + › Criar canal, aceite os termos uma vez e tente de novo.' : `O WhatsApp não criou o canal: ${e.message}`); }
   if (foto?.length) await sock.newsletterUpdatePicture(c.id, foto).catch(e => console.error('[canal] foto:', e.message));
   const invite = `https://whatsapp.com/channel/${c.invite}`;
   if (usarNoRobo) { const p = loadPromos(); if (!p.destinos.some(d => d.jid === c.id)) { p.destinos.push({ tipo: 'canal', invite, jid: c.id, nome }); savePromos(p); } }
