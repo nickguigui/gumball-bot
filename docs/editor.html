@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Editor de figurinhas · Gumball</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="Editor de figurinhas do Gumball Bot: desenhe, escreva, escolha o som e mande no WhatsApp.">
+<meta name="theme-color" content="#f6fbf3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1511" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23006d3b' d='M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Anton&family=Bangers&family=Pacifico&family=Permanent+Marker&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<header class="top" id="top">
+  <a class="brand" href="./"><span class="ms">forum</span>Gumball Bot</a>
+  <span class="ed-title">Editor de figurinhas</span>
+</header>
+
+<main class="ed">
+  <!-- carregando / erro -->
+  <section id="ed-msg" class="ed-msg">
+    <span class="ms spin">progress_activity</span><p>Abrindo o editor…</p>
+  </section>
+
+  <!-- 1) escolher a midia -->
+  <section id="ed-start" hidden>
+    <h1>O que vai virar figurinha?</h1>
+    <p class="muted" id="ed-chat"></p>
+    <div class="ed-pick">
+      <button class="ed-card" id="pk-base" hidden><span class="ms">reply</span><b>A que você respondeu</b><small id="pk-base-sub">Já está aqui</small></button>
+      <button class="ed-card" data-pick="image"><span class="ms">image</span><b>Foto</b><small>Do celular ou computador</small></button>
+      <button class="ed-card" data-pick="video"><span class="ms">movie</span><b>Vídeo ou GIF</b><small>Escolhe o trecho (até 8 s)</small></button>
+      <button class="ed-card" data-pick="blank"><span class="ms">draw</span><b>Só desenho</b><small>Fundo transparente</small></button>
+    </div>
+    <input type="file" id="file-image" accept="image/*" hidden>
+    <input type="file" id="file-video" accept="video/*,image/gif" hidden>
+  </section>
+
+  <!-- 2) editor -->
+  <section id="ed-main" class="ed-main" hidden>
+    <div class="ed-left">
+      <div class="stage" id="stage">
+        <canvas id="cv" width="512" height="512" aria-label="Prévia da figurinha"></canvas>
+      </div>
+      <div class="tools" role="toolbar" aria-label="Ferramentas">
+        <button class="tool on" data-tool="move" title="Mover e dar zoom"><span class="ms">pan_tool</span><span>Mover</span></button>
+        <button class="tool" data-tool="brush" title="Pincel"><span class="ms">brush</span><span>Pintar</span></button>
+        <button class="tool" data-tool="eraser" title="Borracha (apaga só o desenho)"><span class="ms">ink_eraser</span><span>Borracha</span></button>
+        <button class="tool" data-tool="text" title="Texto"><span class="ms">title</span><span>Texto</span></button>
+        <button class="tool" data-tool="emoji" title="Emoji"><span class="ms">add_reaction</span><span>Emoji</span></button>
+        <span class="spacer"></span>
+        <button class="tool icon" id="undo" title="Desfazer" aria-label="Desfazer"><span class="ms">undo</span></button>
+        <button class="tool icon" id="redo" title="Refazer" aria-label="Refazer"><span class="ms">redo</span></button>
+      </div>
+      <p class="muted hint" id="hint">Arraste para mover. Use dois dedos (ou a rodinha do mouse) para dar zoom.</p>
+    </div>
+
+    <div class="ed-right">
+      <!-- opcoes da ferramenta -->
+      <div class="panel" id="p-brush" hidden>
+        <h2>Pincel</h2>
+        <div class="swatches" id="sw-brush"></div>
+        <label class="slider">Tamanho <input type="range" id="brush-size" min="2" max="60" value="12"><output id="brush-size-o">12</output></label>
+        <button class="btn text" id="clear-paint"><span class="ms">delete_sweep</span>Limpar desenho</button>
+      </div>
+      <div class="panel" id="p-eraser" hidden>
+        <h2>Borracha</h2>
+        <p class="muted">Apaga só o que você desenhou; a foto continua.</p>
+        <label class="slider">Tamanho <input type="range" id="eraser-size" min="6" max="90" value="30"><output id="eraser-size-o">30</output></label>
+      </div>
+      <div class="panel" id="p-text" hidden>
+        <h2>Texto</h2>
+        <button class="btn tonal" id="add-text"><span class="ms">add</span>Adicionar texto</button>
+        <div id="text-edit" hidden>
+          <label class="field ed-field"><textarea id="t-val" rows="2" placeholder=" "></textarea><span>Texto</span></label>
+          <div class="fonts" id="t-fonts"></div>
+          <div class="swatches" id="sw-text"></div>
+          <label class="slider">Tamanho <input type="range" id="t-size" min="16" max="200" value="64"><output id="t-size-o">64</output></label>
+          <div class="row-sw"><span>Contorno</span><input type="checkbox" class="switch" id="t-stroke" checked></div>
+          <div class="swatches small" id="sw-stroke"></div>
+          <button class="btn text danger-text" id="t-del"><span class="ms">delete</span>Apagar este texto</button>
+        </div>
+        <p class="muted" id="text-tip">Toque num texto da figurinha para editar ou arrastar.</p>
+      </div>
+      <div class="panel" id="p-emoji" hidden>
+        <h2>Emoji</h2>
+        <div class="emojis" id="emojis"></div>
+        <label class="field ed-field"><input id="emoji-any" placeholder=" " maxlength="8"><span>Ou digite qualquer emoji e toque Enter</span></label>
+        <p class="muted">Toque no emoji da figurinha para arrastar; o tamanho fica na aba Texto.</p>
+      </div>
+      <div class="panel" id="p-move">
+        <h2 id="move-title">Enquadrar</h2>
+        <label class="slider">Zoom <input type="range" id="zoom" min="10" max="400" value="100"><output id="zoom-o">100%</output></label>
+        <div class="seg">
+          <button class="btn tonal small" id="fit-contain"><span class="ms">fit_screen</span>Inteira</button>
+          <button class="btn tonal small" id="fit-cover"><span class="ms">crop_square</span>Preencher</button>
+          <button class="btn tonal small img-only" id="rotate"><span class="ms">rotate_90_degrees_cw</span>Girar</button>
+          <button class="btn tonal small img-only" id="flip"><span class="ms">flip</span>Espelhar</button>
+        </div>
+        <div class="img-only adjust">
+          <label class="slider">Brilho <input type="range" id="f-bri" min="50" max="150" value="100"><output>100</output></label>
+          <label class="slider">Contraste <input type="range" id="f-con" min="50" max="150" value="100"><output>100</output></label>
+          <label class="slider">Saturação <input type="range" id="f-sat" min="0" max="200" value="100"><output>100</output></label>
+        </div>
+        <div class="row-sw"><span>Fundo</span>
+          <div class="seg bgs" id="bgs">
+            <label><input type="radio" name="bg" value="" checked>Transparente</label>
+            <label><input type="radio" name="bg" value="#ffffff">Branco</label>
+            <label><input type="radio" name="bg" value="#000000">Preto</label>
+            <label class="bg-color"><input type="radio" name="bg" value="custom"><input type="color" id="bg-custom" value="#8ace00" aria-label="Cor do fundo"></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- trecho do video -->
+      <div class="panel" id="p-video" hidden>
+        <h2>Trecho do vídeo</h2>
+        <div class="vbar"><button class="btn tonal small" id="v-play"><span class="ms">pause</span></button><span class="mono" id="v-time">0,0 s</span></div>
+        <label class="slider">Começa em <input type="range" id="v-start" min="0" max="10" step="0.1" value="0"><output id="v-start-o">0,0 s</output></label>
+        <label class="slider">Duração <input type="range" id="v-dur" min="0.5" max="8" step="0.1" value="8"><output id="v-dur-o">8,0 s</output></label>
+      </div>
+
+      <!-- som -->
+      <div class="panel" id="p-sound">
+        <h2>Som da figurinha</h2>
+        <div class="seg col" id="snd">
+          <label><input type="radio" name="som" value="nenhum" checked><span class="ms">volume_off</span>Sem som</label>
+          <label class="vid-only"><input type="radio" name="som" value="video"><span class="ms">movie</span>Som do próprio vídeo</label>
+          <label><input type="radio" name="som" value="mp3"><span class="ms">music_note</span>Arquivo de áudio (MP3…)</label>
+          <label><input type="radio" name="som" value="outro"><span class="ms">video_file</span>Áudio de outro vídeo (MP4…)</label>
+          <label><input type="radio" name="som" value="gravar"><span class="ms">mic</span>Gravar agora</label>
+        </div>
+        <input type="file" id="file-mp3" accept="audio/*" hidden>
+        <input type="file" id="file-outro" accept="video/*" hidden>
+        <div id="snd-file" class="snd-box" hidden>
+          <div class="vbar"><span class="ms">audio_file</span><b id="snd-name" class="ellipsis"></b><button class="btn text small" id="snd-change">Trocar</button></div>
+          <label class="slider">Começa em <input type="range" id="snd-start" min="0" max="10" step="0.1" value="0"><output id="snd-start-o">0,0 s</output></label>
+        </div>
+        <div id="snd-rec" class="snd-box" hidden>
+          <div class="vbar">
+            <button class="btn filled rec" id="rec-btn"><span class="ms">mic</span>Gravar</button>
+            <span class="mono" id="rec-time">0,0 s</span>
+          </div>
+          <p class="muted" id="rec-tip">Grava até 30 segundos. O navegador vai pedir para usar o microfone.</p>
+        </div>
+        <div id="snd-len" class="img-only" hidden>
+          <label class="slider">Duração do som <input type="range" id="snd-dur" min="1" max="30" step="0.5" value="10"><output id="snd-dur-o">10 s</output></label>
+        </div>
+        <button class="btn text" id="snd-play" hidden><span class="ms">play_arrow</span>Ouvir o trecho</button>
+      </div>
+
+      <details class="panel" id="p-pack">
+        <summary><h2>Nome do pacote</h2></summary>
+        <label class="field ed-field"><input id="pack" maxlength="60" placeholder=" "><span>Pacote</span></label>
+        <label class="field ed-field"><input id="author" maxlength="60" placeholder=" "><span>Autor</span></label>
+      </details>
+
+      <div class="sendbar">
+        <button class="btn filled large" id="send"><span class="ms">send</span>Mandar no WhatsApp</button>
+        <button class="btn text" id="restart"><span class="ms">restart_alt</span>Começar outra</button>
+        <p id="send-msg" class="send-msg" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+</main>
+<audio id="aud" preload="auto" hidden></audio>
+<script src="editor.js" type="module"></script>
+</body>
+</html>

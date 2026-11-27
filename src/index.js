@@ -158,6 +158,12 @@ if (MANAGED) {
         }
         tell({ type: 'reply', id: msg.id, data: { jid: msg.jid, bot: g.bot !== false, cfg: pickGroupCfg(g.settings) } });
       }
+      // Editor de figurinhas do site: monta e manda a figurinha
+      if (msg.type === 'fig-make') {
+        const { makeSticker } = await import('./lib/editor.js');
+        const data = await makeSticker(current, msg.token, msg.opts).catch(e => ({ erro: e.message || 'Não consegui montar a figurinha.' }));
+        tell({ type: 'reply', id: msg.id, data });
+      }
       if (msg.type === 'logout') { await current?.logout().catch(() => {}); process.exit(4); }
       if (msg.type === 'stop') process.exit(0);
     } catch (e) { tell({ type: 'error', id: msg.id, error: e.message }); }

@@ -6,6 +6,7 @@ import { fork } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(process.env.DATA_ROOT || './data/tenants');
@@ -124,7 +125,24 @@ function auth(req) {
   const s = t && reg.sessions[crypto.createHash('sha256').update(t).digest('hex')];
   return s && s.until > Date.now() ? s.phone : null;
 }
-const ip = req => (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+// Editor de figurinhas: pastas temporarias criadas pelo bot (/editarfig), fora dos dados salvos
+const EDITOR_DIR = process.env.EDITOR_DIR || path.join(os.tmpdir(), 'gumball-editor');
+const figDir = t => (/^[A-Za-z0-9_-]{20,40}$/.test(t || '') ? path.join(EDITOR_DIR, t) : null);
+function figMeta(url) {
+  const d = figDir(url.searchParams.get('t')); if (!d) return null;
+  try { const m = JSON.parse(fs.readFileSync(path.join(d, 'meta.json'), 'utf8')); return m.exp > Date.now() && m.phone ? m : null; } catch { return null; }
+}
+// Corpo binario direto para arquivo, com limite de tamanho
+function rawToFile(req, file, max) {
+  return new Promise(res => {
+    let n = 0; const out = fs.createWriteStream(file); let done = false;
+    const fail = () => { if (done) return; done = true; out.destroy(); fs.rmSync(file, { force: true }); req.resume(); res(false); };
+    req.on('data', c => { n += c.length; if (n > max) return fail(); out.write(c); });
+    req.on('end', () => { if (done) return; done = true; out.end(() => res(n > 0)); });
+    req.on('error', fail);
+  });
+}
+const ip = req =>(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
 const routes = {
   // Diagnostico (so com a chave ADMIN_KEY do servidor): estado e log de um numero
@@ -225,6 +243,36 @@ const routes = {
     const p = procs.get(phone); if (p) p.child.send({ type: 'logout' }); else { fs.rmSync(dir(phone), { recursive: true, force: true }); delete reg.tenants[phone]; saveReg(); }
     return [200, { ok: true }];
   },
+  // ---------- Editor de figurinhas (link do /editarfig; o token e a "senha" do link) ----------
+  'GET /api/fig': async (req, url) => {
+    const m = figMeta(url); if (!m) return [410, { erro: 'Esse link expirou ou o bot reiniciou. Mande /editarfig de novo no WhatsApp.' }];
+    const p = procs.get(m.phone);
+    return [200, { chat: m.chatName, expira: m.exp, base: m.base?.kind || null, pacote: m.pack, autor: m.author, feitas: m.made, online: p?.state === 'connected' }];
+  },
+  'GET /api/fig/midia': async (req, url) => {
+    const m = figMeta(url); if (!m?.base) return [404, { erro: 'Sem mídia.' }];
+    const f = path.join(figDir(url.searchParams.get('t')), m.base.file);
+    return [200, fs.readFileSync(f), m.base.kind === 'video' ? 'video/mp4' : 'image/' + (m.base.file.endsWith('png') ? 'png' : 'jpeg')];
+  },
+  'POST /api/fig/arquivo': async (req, url) => {
+    const m = figMeta(url); if (!m) return [410, { erro: 'Esse link expirou. Mande /editarfig de novo.' }];
+    const campo = url.searchParams.get('campo'); const ext = (url.searchParams.get('ext') || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin';
+    const max = { video: 60, audio: 40, overlay: 4, final: 6 }[campo]; if (!max) return [400, { erro: 'Arquivo inválido.' }];
+    if (limited('fig:' + url.searchParams.get('t'), 60, 30 * 60_000)) return [429, { erro: 'Envios demais por esse link. Mande /editarfig de novo.' }];
+    const d = figDir(url.searchParams.get('t'));
+    for (const f of fs.readdirSync(d)) if (f.startsWith(campo + '.')) fs.rmSync(path.join(d, f), { force: true });
+    const ok = await rawToFile(req, path.join(d, `${campo}.${ext}`), max * 1024 * 1024);
+    if (!ok) return [413, { erro: `Arquivo grande demais (máximo ${max} MB).` }];
+    return [200, { ok: true }];
+  },
+  'POST /api/fig/criar': async (req, url) => {
+    const m = figMeta(url); if (!m) return [410, { erro: 'Esse link expirou. Mande /editarfig de novo.' }];
+    const p = procs.get(m.phone); if (p?.state !== 'connected') return [409, { erro: 'O bot está ligando. Tente de novo em alguns segundos.' }];
+    if (limited('figc:' + url.searchParams.get('t'), 20, 30 * 60_000)) return [429, { erro: 'Figurinhas demais por esse link. Mande /editarfig de novo.' }];
+    const r = await ask(p, { type: 'fig-make', token: url.searchParams.get('t'), opts: await body(req) }, 170_000);
+    if (!r) return [504, { erro: 'Demorou demais para montar. Tente um trecho menor.' }];
+    return r.erro ? [400, r] : [200, r];
+  },
   'POST /api/sair': async (req) => {
     const t = (req.headers.authorization || '').replace(/^Bearer\s+/, ''); delete reg.sessions[crypto.createHash('sha256').update(t).digest('hex')]; saveReg();
     return [200, { ok: true }];
@@ -236,7 +284,11 @@ http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204, { ...(origin ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'GET,POST', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Max-Age': '86400' } : {}) }); return res.end(); }
   const url = new URL(req.url, 'http://x'); const h = routes[`${req.method} ${url.pathname}`];
   if (!h) return send(res, 404, { erro: 'Não encontrado' }, origin);
-  try { const [s, b] = await h(req, url); send(res, s, b, origin); } catch (e) { console.error(e); send(res, 500, { erro: 'Erro interno. Tente de novo.' }, origin); }
+  try {
+    const [s, b, type] = await h(req, url);
+    if (Buffer.isBuffer(b)) { res.writeHead(s, { 'Content-Type': type || 'application/octet-stream', 'Content-Length': b.length, 'Cache-Control': 'no-store', ...(origin ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : {}) }); return res.end(b); }
+    send(res, s, b, origin);
+  } catch (e) { console.error(e); send(res, 500, { erro: 'Erro interno. Tente de novo.' }, origin); }
 }).listen(PORT, () => {
   console.log(`🟢 Gumball servidor na porta ${PORT} (${Object.keys(reg.tenants).length} números)`);
   for (const phone of Object.keys(reg.tenants)) if (isRegistered(phone)) start(phone); // religa todo mundo

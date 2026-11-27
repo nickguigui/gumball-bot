@@ -1,5 +1,5 @@
 {
- "total": 341,
+ "total": 342,
  "categories": [
   {
    "cat": "🤝 SUPORTE DO BOT",
@@ -17,6 +17,7 @@
    "cmds": [
     "fig",
     "s",
+    "editarfig",
     "qc",
     "attp",
     "ttp",
