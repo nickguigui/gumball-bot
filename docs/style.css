@@ -288,3 +288,4 @@ details.guia ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
 .lado-toggle button.on .lado-n{background:var(--on-primary);color:var(--primary)}
 @media (prefers-reduced-motion:reduce){.lado-thumb{transition:none}}
 details.guia ol{grid-template-columns:minmax(0,1fr)}details.guia li,details.guia code{min-width:0;overflow-wrap:anywhere}#pn-promos .row .field{min-width:min(160px,100%)}
+#pn-promos .savebar{flex-wrap:wrap}
