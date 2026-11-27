@@ -320,10 +320,19 @@
       </ul>
 
       <h3 class="painel-sec">Onde postar</h3>
-      <p class="muted small">Grupos onde o seu número está. Para canal, o seu número precisa ser admin dele.</p>
+      <div class="lado-toggle" role="tablist" aria-label="Postar em grupos ou canais">
+        <span class="lado-thumb" aria-hidden="true"></span>
+        <button type="button" role="tab" class="on" aria-selected="true" data-lado="grupos"><span class="ms">groups</span>Grupos <span class="lado-n" id="pr-n-grupos"></span></button>
+        <button type="button" role="tab" aria-selected="false" data-lado="canais"><span class="ms">campaign</span>Canal <span class="lado-n" id="pr-n-canais"></span></button>
+      </div>
+      <div id="pr-lado-grupos">
+      <p class="muted small">Grupos onde o seu número está.</p>
       <label class="search" style="margin:8px 0"><span class="ms">search</span><input id="pr-busca" placeholder="Procurar grupo"></label>
       <ul class="opcoes" id="pr-grupos"><li class="muted">Carregando seus grupos…</li></ul>
       <button type="button" class="linkbtn" id="pr-todos" hidden></button>
+      </div>
+      <div id="pr-lado-canais" hidden>
+      <p class="muted small">Canais do WhatsApp. O seu número precisa ser admin (ou dono) do canal.</p>
       <ul class="opcoes" id="pr-canais"></ul>
       <div class="row"><label class="field"><input id="pr-canal-link" placeholder=" " inputmode="url"><span>Link do canal (https://whatsapp.com/channel/…)</span></label><button type="button" class="btn tonal" id="pr-canal-add"><span class="ms">add</span>Adicionar canal</button></div>
       <details class="novo-canal" id="pr-novo-canal">
@@ -343,6 +352,7 @@
           </div>
         </div>
       </details>
+      </div>
 
       <h3 class="painel-sec">Quando e o quê</h3>
       <div class="row">

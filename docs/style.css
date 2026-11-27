@@ -276,3 +276,14 @@ details.guia ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
 .nc-campos{flex:1;min-width:240px;display:grid;gap:10px}
 .nc-campos .ed-field textarea{width:100%;padding:22px 16px 8px;border:1px solid var(--outline);border-radius:4px;background:var(--surface);color:var(--on-surface);font:inherit;font-size:16px;resize:vertical;outline:none}
 .nc-campos .ed-field textarea+span{position:absolute;left:16px;top:6px;font-size:12px;color:var(--on-surface-var)}
+/* interruptor Grupos | Canal (um lado de cada vez, com o "botao" deslizando) */
+.lado-toggle{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;width:min(100%,360px);height:52px;padding:4px;margin:4px 0 12px;border-radius:26px;background:var(--surface-c-highest);border:1px solid var(--outline-var)}
+.lado-thumb{position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);border-radius:22px;background:var(--primary);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.lado-toggle.direita .lado-thumb{transform:translateX(100%)}
+.lado-toggle button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:6px;border:0;background:none;border-radius:22px;color:var(--on-surface-var);font:800 15px 'Nunito',sans-serif;cursor:pointer;transition:color .2s}
+.lado-toggle button.on{color:var(--on-primary)}
+.lado-toggle button .ms{font-size:20px}
+.lado-n:empty{display:none}
+.lado-n{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--surface);color:var(--on-surface);font-size:12px;line-height:20px}
+.lado-toggle button.on .lado-n{background:var(--on-primary);color:var(--primary)}
+@media (prefers-reduced-motion:reduce){.lado-thumb{transition:none}}

@@ -9,9 +9,10 @@ function renderGrupos() {
   const lista = grupos.filter(x => !q || x.nome.toLowerCase().includes(q)).sort((a, b) => marcados.has(b.jid) - marcados.has(a.jid));
   const mostrar = q || todos ? lista : lista.slice(0, Math.max(6, [...marcados].length));
   $('#pr-grupos').innerHTML = mostrar.length ? mostrar.map(x => `<li><div><b>👥 ${esc(x.nome)}</b><p>${x.membros} ${x.membros === 1 ? 'pessoa' : 'pessoas'}</p></div><input type="checkbox" class="switch" data-jid="${esc(x.jid)}" data-nome="${esc(x.nome)}" ${marcados.has(x.jid) ? 'checked' : ''} aria-label="Postar em ${esc(x.nome)}"></li>`).join('') : `<li class="muted">${grupos.length ? 'Nenhum grupo com esse nome.' : 'Seu número ainda não está em nenhum grupo.'}</li>`;
+  contar();
   const sobra = lista.length - mostrar.length; $('#pr-todos').hidden = sobra <= 0; $('#pr-todos').textContent = `Ver todos os grupos (${lista.length})`;
 }
-$('#pr-grupos').addEventListener('change', e => { const i = e.target.closest('input[data-jid]'); if (i) i.checked ? marcados.add(i.dataset.jid) : marcados.delete(i.dataset.jid); });
+$('#pr-grupos').addEventListener('change', e => { const i = e.target.closest('input[data-jid]'); if (i) { i.checked ? marcados.add(i.dataset.jid) : marcados.delete(i.dataset.jid); contar(); } });
 $('#pr-busca').addEventListener('input', renderGrupos);
 $('#pr-todos').addEventListener('click', () => { todos = true; renderGrupos(); });
 
@@ -26,6 +27,7 @@ function status(r) {
 }
 function renderCanais() {
   $('#pr-canais').innerHTML = canais.map((c, i) => `<li><div><b>📢 ${esc(c.nome || 'Canal')}</b><p>${esc(c.invite)}</p></div><button type="button" class="btn text" data-rm="${i}">Remover</button></li>`).join('');
+  contar();
 }
 $('#pr-canais').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { canais.splice(+b.dataset.rm, 1); renderCanais(); } });
 // criar um canal novo (foto, nome, descricao) e ja usar no robo
@@ -69,6 +71,7 @@ async function abrir() {
     grupos = (g.grupos || []).filter(x => x.nome);
     renderGrupos();
     canais = r.destinos.filter(d => d.tipo === 'canal'); renderCanais(); status(r); say('#pr-salvo', '');
+    lado(canais.length && !marcados.size ? 'canais' : 'grupos');
   } catch (e) { $('#pr-grupos').innerHTML = `<li class="muted">${esc(e.message)}</li>`; }
 }
 $('#pn-promo-abrir').addEventListener('click', abrir);
@@ -129,3 +132,16 @@ async function resumoPainel() {
   try { const r = await api('/api/promos'); const lojas = Object.values(r.lojas).filter(Boolean).length; $('#pn-promo-resumo').textContent = r.ativo ? `Ligado · ${r.destinos.length} destino(s) · ${r.hoje} post(s) hoje` : `Desligado · ${lojas} de 4 lojas configuradas`; } catch {}
 }
 new MutationObserver(() => { if (!$('#painel').hidden) resumoPainel(); }).observe($('#painel'), { attributes: true, attributeFilter: ['hidden'] });
+
+// Interruptor Grupos | Canal: mostra um lado de cada vez (as escolhas dos dois lados continuam valendo)
+function lado(qual) {
+  document.querySelectorAll('.lado-toggle button').forEach(b => { const on = b.dataset.lado === qual; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+  document.querySelector('.lado-toggle').classList.toggle('direita', qual === 'canais');
+  $('#pr-lado-grupos').hidden = qual !== 'grupos'; $('#pr-lado-canais').hidden = qual !== 'canais';
+}
+document.querySelector('.lado-toggle').addEventListener('click', e => { const b = e.target.closest('button[data-lado]'); if (b) lado(b.dataset.lado); });
+// contadores de escolhidos em cada lado
+function contar() {
+  $('#pr-n-grupos').textContent = marcados.size ? marcados.size : '';
+  $('#pr-n-canais').textContent = canais.length ? canais.length : '';
+}
