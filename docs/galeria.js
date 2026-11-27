@@ -5,7 +5,9 @@ const RAW = `https://raw.githubusercontent.com/${REPO}/galeria`;
 const APK = `https://github.com/${REPO}/releases/latest/download/gumball-figurinhas.apk`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const isAndroid = /Android/i.test(navigator.userAgent), isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const inApp = /GumballApp/i.test(navigator.userAgent) || !!window.GumballApp;
+// dentro do app Android: o app abre o site com ?app=1 (guardado para a navegacao toda) e injeta o Capacitor
+try { if (/[?&]app=1/.test(location.search)) sessionStorage.setItem('gumball-app', '1'); } catch {}
+const inApp = /GumballApp/i.test(navigator.userAgent) || !!window.Capacitor?.isNativePlatform?.() || (() => { try { return sessionStorage.getItem('gumball-app') === '1'; } catch { return false; } })();
 
 // raw.githubusercontent guarda por ate 5 min; a API do GitHub e a reserva (sempre atual)
 async function getJson(file) {
