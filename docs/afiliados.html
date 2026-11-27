@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia de afiliado · Gumball</title>
+<meta name="description" content="Passo a passo para criar conta de afiliado na Amazon, Mercado Livre, Shopee e AliExpress, gerar seus links e ligar o robô de promoções do Gumball.">
+<meta name="theme-color" content="#f6fbf3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1511" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icons/favicon-32.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.guia-pg{max-width:820px;margin:0 auto;padding:8px 16px 64px}
+.guia-pg h1{font-size:clamp(28px,6vw,40px);font-weight:900;margin:16px 0 8px}
+.guia-pg h2{font-size:22px;font-weight:800;margin:40px 0 8px;display:flex;align-items:center;gap:10px}
+.guia-pg h3{font-size:16px;font-weight:800;margin:20px 0 6px}
+.guia-pg p,.guia-pg li{line-height:1.6}
+.guia-pg ol,.guia-pg ul{padding-left:22px;display:grid;gap:6px}
+.indice{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.loja-tag{font-size:13px;font-weight:800;padding:3px 10px;border-radius:8px;background:var(--secondary-container);color:var(--on-secondary-container)}
+.caixa{padding:14px 18px;border-radius:16px;background:var(--surface-c);margin:14px 0}
+.caixa.aviso{background:var(--tertiary-container);color:var(--on-tertiary-container)}
+.caixa b{font-weight:800}
+code{word-break:break-all}
+.passo-gumball{border-left:4px solid var(--primary);padding:4px 0 4px 14px;margin:14px 0}
+</style>
+</head>
+<body>
+<header class="top" id="top">
+  <a class="brand" href="./"><span class="ms">forum</span>Gumball Bot</a>
+  <span class="spacer"></span>
+  <a class="btn tonal" href="./#conectar"><span class="ms">sell</span>Abrir o robô</a>
+</header>
+<main class="guia-pg">
+  <h1>Como ganhar com link de afiliado</h1>
+  <p class="lead">Link de afiliado é um link de produto com o <b>seu código</b>. Quando alguém compra por ele, a loja te paga uma comissão, e a pessoa paga o mesmo preço. O Gumball coloca o seu código nos links e posta as ofertas sozinho no seu grupo ou canal.</p>
+
+  <div class="caixa"><b>Você nunca precisa dar a sua senha para o Gumball.</b> Cada loja te dá um código (ou uma chave) no painel de afiliado. Você copia e cola no painel do Gumball. Só isso.</div>
+
+  <nav class="indice" aria-label="Lojas">
+    <a class="btn outlined small" href="#amazon">Amazon</a>
+    <a class="btn outlined small" href="#ml">Mercado Livre</a>
+    <a class="btn outlined small" href="#shopee">Shopee</a>
+    <a class="btn outlined small" href="#ali">AliExpress</a>
+    <a class="btn outlined small" href="#gumball">Ligar no Gumball</a>
+    <a class="btn outlined small" href="#regras">Regras e dicas</a>
+  </nav>
+
+  <h2>Antes de começar</h2>
+  <ul>
+    <li>Tenha um lugar para divulgar: um <b>grupo</b> ou <b>canal</b> do WhatsApp. Não tem canal? O Gumball cria um para você (painel › Robô de promoções › "Criar um agora").</li>
+    <li>As lojas pedem o "site ou rede social" no cadastro: coloque o link do seu canal do WhatsApp, Instagram ou TikTok.</li>
+    <li>Para receber, as lojas pedem CPF e chave Pix ou conta bancária. Se você é menor de idade, faça o cadastro com um responsável.</li>
+  </ul>
+
+  <h2 id="amazon"><span class="ms">shopping_cart</span>Amazon Associados <span class="loja-tag">converte links</span></h2>
+  <h3>Criar a conta</h3>
+  <ol>
+    <li>Entre em <a href="https://associados.amazon.com.br" target="_blank" rel="noopener">associados.amazon.com.br</a> e toque em <b>Inscreva-se</b> (use a mesma conta em que você compra na Amazon).</li>
+    <li>Preencha seus dados e, em "sites e aplicativos", coloque o link do seu canal ou rede social.</li>
+    <li>Escolha o seu <b>ID de loja</b>. Ele vira o seu código, terminado em <code>-20</code> (ex.: <code>promosdonick-20</code>).</li>
+    <li>A Amazon aprova de verdade depois que você fizer <b>3 vendas em 180 dias</b>. Até lá, os links já funcionam e contam.</li>
+  </ol>
+  <h3>Gerar um link na mão</h3>
+  <ol>
+    <li>Logado na Amazon, abra qualquer produto: aparece a barra <b>SiteStripe</b> no topo.</li>
+    <li>Toque em <b>Obter link › Texto</b> e copie. Ele já vem com o seu código.</li>
+  </ol>
+  <div class="passo-gumball"><b>No Gumball:</b> cole só o código (<code>seucodigo-20</code>). Depois qualquer link da Amazon (até <code>amzn.to</code>) vira seu automaticamente.</div>
+
+  <h2 id="ml"><span class="ms">local_shipping</span>Mercado Livre Afiliados <span class="loja-tag">converte links</span></h2>
+  <h3>Criar a conta</h3>
+  <ol>
+    <li>Entre em <a href="https://www.mercadolivre.com.br/afiliados" target="_blank" rel="noopener">mercadolivre.com.br/afiliados</a> com a sua conta do Mercado Livre e peça para participar.</li>
+    <li>Informe onde vai divulgar e espere a aprovação (chega por e-mail).</li>
+  </ol>
+  <h3>Gerar um link na mão</h3>
+  <ol>
+    <li>Com o programa aprovado, abra um produto no Mercado Livre (site ou app) e toque em <b>Compartilhar › Gerar link de afiliado</b>, ou use o gerador de links no painel de afiliados.</li>
+    <li>Copie o link. Se ele vier curto (<code>meli.la/…</code>), abra no navegador e copie o endereço <b>completo</b> da barra: é esse que tem o seu código (<code>matt_tool</code> e <code>matt_word</code>).</li>
+  </ol>
+  <div class="passo-gumball"><b>No Gumball:</b> cole esse link completo uma vez. Eu copio o seu código dele e coloco em todos os links do Mercado Livre que você mandar.</div>
+
+  <h2 id="shopee"><span class="ms">storefront</span>Shopee Afiliados <span class="loja-tag">ofertas automáticas</span></h2>
+  <h3>Criar a conta</h3>
+  <ol>
+    <li>Entre em <a href="https://affiliate.shopee.com.br" target="_blank" rel="noopener">affiliate.shopee.com.br</a> com a sua conta da Shopee e faça o cadastro (pede CPF e redes sociais).</li>
+    <li>Espere a aprovação.</li>
+  </ol>
+  <h3>Gerar um link na mão</h3>
+  <ol>
+    <li>No app da Shopee: <b>Eu › Programa de Afiliados</b>, ou no painel do site: <b>Links personalizados</b>.</li>
+    <li>Cole o link do produto e toque em <b>Obter link</b>.</li>
+  </ol>
+  <h3>Chaves da API (para o Gumball achar ofertas sozinho)</h3>
+  <ol>
+    <li>No painel de afiliado, abra <b>Open API</b> e peça acesso.</li>
+    <li>Depois de liberado, copie o <b>AppID</b> e o <b>Secret</b>.</li>
+  </ol>
+  <div class="passo-gumball"><b>No Gumball:</b> cole o AppID e o Secret. O robô passa a buscar as melhores ofertas da Shopee (dos assuntos que você escolher) e gera o seu link sozinho.</div>
+
+  <h2 id="ali"><span class="ms">public</span>AliExpress Portals <span class="loja-tag">ofertas automáticas</span></h2>
+  <h3>Criar a conta</h3>
+  <ol>
+    <li>Entre em <a href="https://portals.aliexpress.com" target="_blank" rel="noopener">portals.aliexpress.com</a> com a sua conta do AliExpress e cadastre-se.</li>
+    <li>No painel, crie um <b>Tracking ID</b> (é o seu código de afiliado).</li>
+  </ol>
+  <h3>Gerar um link na mão</h3>
+  <ol><li>No Portals, use <b>Ferramentas › Gerador de links</b>: cole o link do produto e copie o link gerado.</li></ol>
+  <h3>Chaves da API</h3>
+  <ol>
+    <li>Entre em <a href="https://openservice.aliexpress.com" target="_blank" rel="noopener">openservice.aliexpress.com</a> com a mesma conta e crie um app do tipo <b>Affiliates</b>.</li>
+    <li>Quando aprovado, copie o <b>App Key</b> e o <b>App Secret</b>.</li>
+  </ol>
+  <div class="passo-gumball"><b>No Gumball:</b> cole App Key, App Secret e Tracking ID.</div>
+
+  <h2 id="gumball"><span class="ms">smart_toy</span>Ligando o robô no Gumball</h2>
+  <ol>
+    <li>No site, abra <a href="./#conectar">Conectar / Painel</a> e entre com o seu número.</li>
+    <li>Toque em <b>Robô de promoções › Configurar</b>.</li>
+    <li>Em <b>Onde postar</b>, marque o grupo ou toque em <b>Criar um agora</b> para criar o canal (com foto, nome e descrição).</li>
+    <li>Em <b>Suas lojas</b>, cole os códigos e chaves. Toque em <b>Salvar</b> e depois em <b>Mandar post de teste</b>.</li>
+    <li>Ligue o <b>Robô ligado</b>. Pronto: ele posta no horário e na frequência que você escolheu.</li>
+    <li>Achou uma oferta boa? Cole o link em <b>Postar uma oferta</b> (pode mandar foto, preço e cupom) ou, no WhatsApp, <code>/promo link 129,90 de 199,90 cupom X</code>.</li>
+  </ol>
+  <div class="caixa">No WhatsApp também dá: <code>/comoafiliar</code>, <code>/afiliados</code>, <code>/afiliado link</code>, <code>/criarcanal Nome | Descrição</code> (mande como legenda de uma foto), <code>/promocoes</code>.</div>
+
+  <h2 id="regras"><span class="ms">gavel</span>Regras e dicas</h2>
+  <ul>
+    <li><b>Avise que é link de afiliado.</b> A Amazon exige, e é o certo com quem te segue. O Gumball já coloca uma linha avisando em cada post.</li>
+    <li><b>Não compre pelo seu próprio link</b> e não peça para amigos comprarem só para gerar comissão: as lojas cancelam a conta.</li>
+    <li><b>Preço muda rápido.</b> O post já avisa; prefira ofertas com desconto de verdade (o robô deixa escolher o desconto mínimo).</li>
+    <li><b>Não exagere na frequência.</b> Um post a cada 20 a 60 minutos segura melhor os seguidores do que vários seguidos.</li>
+    <li><b>Não use links de afiliado em lugares proibidos</b> (anúncios pagos com o nome da loja, spam em grupos dos outros).</li>
+  </ul>
+  <div class="caixa aviso">Cada loja tem as próprias regras e taxas de comissão, que mudam com o tempo. Confira sempre no painel de afiliado de cada uma.</div>
+</main>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+</body>
+</html>

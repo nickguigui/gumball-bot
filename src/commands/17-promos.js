@@ -1,6 +1,6 @@
 // Robo de promocoes com link de afiliado (Amazon, Mercado Livre, Shopee, AliExpress) para grupos e canais.
 import { converter, mlCodigos, brl, LOJAS } from '../lib/afiliados.js';
-import { loadPromos, savePromos, resumo, ofertaDoLink, postarOferta, fila, setFila, legenda } from '../promos.js';
+import { loadPromos, savePromos, resumo, ofertaDoLink, postarOferta, fila, setFila, legenda, criarCanal } from '../promos.js';
 
 const C = '🛒 PROMOÇÕES';
 const SITE = 'https://nickguigui.github.io/gumball-bot/#conectar';
@@ -30,7 +30,9 @@ const GUIA = `🛒 *COMO CRIAR SUAS CONTAS DE AFILIADO*\n_(é grátis; nada de s
 • portals.aliexpress.com → Cadastre-se
 • Depois: open.aliexpress.com → crie um app de afiliado e pegue *App Key* e *Secret*; o *Tracking ID* fica no Portals
 • Cole no site ou: */afiliados aliexpress APPKEY SECRET TRACKINGID*\n
-Depois: */promocoes aqui* (neste grupo) ou */promocoes canal <link do canal>*, e */promocoes ligar*. 🚀`;
+Depois: */promocoes aqui* (neste grupo) ou */promocoes canal <link do canal>*, e */promocoes ligar*. 🚀
+
+📖 Tutorial completo (passo a passo e regras): https://nickguigui.github.io/gumball-bot/afiliados.html`;
 
 export const commands = [
   {
@@ -110,6 +112,16 @@ export const commands = [
 *Comandos:* /promocoes ligar|desligar · aqui · canal <link> · remover <n> · intervalo <min> · horario 08:00-22:00 · busca fone, air fryer · desconto 20 · assinatura · fila · limpar · testar
 /promo <link> · /afiliado <link> · /afiliados · /comoafiliar
 💻 Ou tudo pelo site: ${SITE}`);
+    },
+  },
+  {
+    // cria o canal (nome | descricao; foto = legenda de uma foto) e ja liga no robo de promocoes
+    name: 'criarcanal', aliases: ['novocanal'], category: C, react: '📢', run: async ctx => {
+      const [nome, ...desc] = ctx.q.split('|');
+      if (!nome?.trim()) return ctx.reply('📢 *Uso:* /criarcanal Nome do canal | Descrição do canal\n📷 Mande como *legenda de uma foto* para ela virar a foto do canal.\n\nO canal já entra no robô de promoções. Também dá pelo site: ' + SITE);
+      const foto = await ctx.media(['imageMessage']).catch(() => null);
+      const r = await criarCanal(ctx.sock, { nome, descricao: desc.join('|'), foto: foto?.buffer });
+      return ctx.reply(`📢 *Canal criado!*\n\n*${r.nome}*\n🔗 ${r.invite}\n\n✅ Já está no robô de promoções. Ligue com */promocoes ligar* (ou no site).\n💡 Compartilhe o link para as pessoas seguirem.`);
     },
   },
 ];

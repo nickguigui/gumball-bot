@@ -1,5 +1,5 @@
 {
- "total": 356,
+ "total": 357,
  "categories": [
   {
    "cat": "🤝 SUPORTE DO BOT",
@@ -53,7 +53,8 @@
     "promo",
     "afiliado",
     "afiliados",
-    "comoafiliar"
+    "comoafiliar",
+    "criarcanal"
    ]
   },
   {

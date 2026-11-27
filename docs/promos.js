@@ -28,6 +28,26 @@ function renderCanais() {
   $('#pr-canais').innerHTML = canais.map((c, i) => `<li><div><b>📢 ${esc(c.nome || 'Canal')}</b><p>${esc(c.invite)}</p></div><button type="button" class="btn text" data-rm="${i}">Remover</button></li>`).join('');
 }
 $('#pr-canais').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { canais.splice(+b.dataset.rm, 1); renderCanais(); } });
+// criar um canal novo (foto, nome, descricao) e ja usar no robo
+let ncFoto = null;
+$('#nc-foto').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  ncFoto = await fotoB64(f, 640); $('#nc-prev').src = 'data:image/jpeg;base64,' + ncFoto;
+});
+$('#nc-criar').addEventListener('click', async () => {
+  const nome = $('#nc-nome').value.trim(), m = $('#nc-msg'), b = $('#nc-criar');
+  const show = (h, erro) => { m.innerHTML = h; m.hidden = false; m.style.background = erro ? 'var(--error-container)' : ''; m.style.color = erro ? 'var(--on-error-container)' : ''; };
+  if (nome.length < 2) return show('Dê um nome ao canal.', true);
+  b.disabled = true; show('Criando o canal no seu WhatsApp…');
+  try {
+    const r = await api('/api/promos/criarcanal', { method: 'POST', body: { nome, descricao: $('#nc-desc').value, fotoB64: ncFoto } });
+    canais = canais.filter(c => c.invite !== r.invite).concat([{ tipo: 'canal', invite: r.invite, nome: r.nome }]); renderCanais();
+    show(`✓ Canal <b>${esc(r.nome)}</b> criado e já ligado no robô! <a href="${esc(r.invite)}" target="_blank" rel="noopener">Abrir no WhatsApp</a> · <button type="button" class="btn text small" id="nc-copiar"><span class="ms">content_copy</span>Copiar link</button>`);
+    $('#nc-copiar').onclick = () => navigator.clipboard?.writeText(r.invite);
+    $('#nc-nome').value = ''; $('#nc-desc').value = ''; ncFoto = null; $('#nc-prev').src = 'icons/icon-192.png';
+  } catch (e) { show(esc(e.message), true); }
+  b.disabled = false;
+});
 $('#pr-canal-add').addEventListener('click', () => {
   const l = $('#pr-canal-link').value.trim();
   if (!/whatsapp\.com\/channel\//.test(l)) return say('#pr-salvo', 'Cole o link de convite do canal (https://whatsapp.com/channel/…).');
@@ -89,10 +109,10 @@ $('#pr-oferta').addEventListener('submit', async e => {
   } catch (err) { msg(esc(err.message), false); }
 });
 // foto reduzida no navegador (ate 900px, JPEG) para caber no envio
-function fotoB64(file) {
+function fotoB64(file, max = 900) {
   return new Promise(res => {
     const img = new Image(); img.onload = () => {
-      const k = Math.min(1, 900 / Math.max(img.width, img.height)); const c = Object.assign(document.createElement('canvas'), { width: Math.round(img.width * k), height: Math.round(img.height * k) });
+      const k = Math.min(1, max / Math.max(img.width, img.height)); const c = Object.assign(document.createElement('canvas'), { width: Math.round(img.width * k), height: Math.round(img.height * k) });
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.85).split(',')[1]); URL.revokeObjectURL(img.src);
     }; img.onerror = () => res(undefined); img.src = URL.createObjectURL(file);
   });

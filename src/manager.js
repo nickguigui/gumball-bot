@@ -303,6 +303,7 @@ const routes = {
   'POST /api/promos/testar': async (req) => promoAsk(req, { type: 'promos-testar' }, 60_000),
   'POST /api/promos/oferta': async (req) => { const b = await body(req, 1_500_000); /* pode vir com foto */ return promoAsk(req, { type: 'promos-oferta', url: b.url, extra: b.extra, agora: !!b.agora }, 60_000); },
   'POST /api/promos/limpar': async (req) => promoAsk(req, { type: 'promos-limpar' }),
+  'POST /api/promos/criarcanal': async (req) => { const b = await body(req, 2_000_000); /* pode vir com foto */ return promoAsk(req, { type: 'promos-criarcanal', nome: b.nome, descricao: b.descricao, fotoB64: b.fotoB64, usarNoRobo: b.usarNoRobo }, 60_000); },
   // Galeria: denuncia de um pacote (3 pessoas diferentes escondem ate o dono da plataforma olhar)
   'POST /api/galeria/denunciar': async (req) => {
     if (limited('den:' + ip(req), 10, 3600_000)) return [429, { erro: 'Denúncias demais. Tente mais tarde.' }];

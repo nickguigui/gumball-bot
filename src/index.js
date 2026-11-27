@@ -214,6 +214,7 @@ if (MANAGED) {
             const f = P.fila(); f.push(o); P.setFila(f); return { naFila: f.length, oferta: o };
           }
           if (msg.type === 'promos-limpar') { P.setFila([]); return P.resumo(); }
+          if (msg.type === 'promos-criarcanal') return P.criarCanal(current, { nome: msg.nome, descricao: msg.descricao, foto: msg.fotoB64 ? Buffer.from(String(msg.fotoB64), 'base64') : null, usarNoRobo: msg.usarNoRobo !== false });
         })().catch(e => ({ erro: e.message }));
         tell({ type: 'reply', id: msg.id, data: r });
       }

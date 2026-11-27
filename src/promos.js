@@ -25,7 +25,7 @@ export function legenda(o, p = loadPromos()) {
   const antigo = o.precoAntigo && o.precoAntigo > o.preco * 1.02 ? `~De ${brl(o.precoAntigo)}~\n` : '';
   const desc = o.desconto ? ` _(-${Math.round(o.desconto)}%)_` : '';
   const extra = [o.loja && `🏪 ${o.loja}`, o.vendas > 50 && `🛒 ${o.vendas.toLocaleString('pt-BR')} vendidos`, o.nota >= 4.5 && `⭐ ${o.nota.toFixed(1)}`].filter(Boolean).join(' · ');
-  return `${p.emoji || '🔥'} *${String(o.titulo || 'Oferta').slice(0, 140)}*\n\n${antigo}${o.preco ? `💰 *Por ${brl(o.preco)}*${desc}\n` : ''}${o.cupom ? `🎟️ Cupom: *${o.cupom}*\n` : ''}${extra ? extra + '\n' : ''}\n👉 ${o.link}\n\n_Preço e estoque podem mudar a qualquer momento._${p.assinatura ? `\n\n${p.emoji || '🔥'}- _${p.assinatura}_` : ''}`;
+  return `${p.emoji || '🔥'} *${String(o.titulo || 'Oferta').slice(0, 140)}*\n\n${antigo}${o.preco ? `💰 *Por ${brl(o.preco)}*${desc}\n` : ''}${o.cupom ? `🎟️ Cupom: *${o.cupom}*\n` : ''}${extra ? extra + '\n' : ''}\n👉 ${o.link}\n\n_Preço e estoque podem mudar. Link de afiliado: posso ganhar uma comissão, sem custo extra para você._${p.assinatura ? `\n\n${p.emoji || '🔥'}- _${p.assinatura}_` : ''}`;
 }
 
 const enviaGrupo = (sock, jid, content) => queue.push(() => { const messageId = generateMessageIDV2(sock.user?.id); sentIds.add(messageId); return sock.sendMessage(jid, content, { messageId }); });
@@ -106,4 +106,17 @@ export function resumo(p = loadPromos()) {
     lojas: { amazon: a.amazon || '', mercadolivre: !!(a.mercadolivre?.tool || a.mercadolivre?.word), shopee: !!(a.shopee?.appId && a.shopee?.secret), aliexpress: !!(a.aliexpress?.appKey && a.aliexpress?.secret && a.aliexpress?.trackingId) },
     fila: fila().length, hoje: (() => { const h = db.get('promo:hoje', { dia: '', n: 0 }); return h.dia === new Date().toLocaleDateString('pt-BR', { timeZone: config.timezone }) ? h.n : 0; })(), erro: db.get('promo:erro', null),
   };
+}
+
+// Cria um canal do WhatsApp (nome, descricao, foto) no numero conectado e ja coloca no robo de promocoes
+export async function criarCanal(sock, { nome, descricao, foto, usarNoRobo = true } = {}) {
+  nome = String(nome || '').trim().slice(0, 100); descricao = String(descricao || '').trim().slice(0, 2048);
+  if (nome.length < 2) throw new Error('Dê um nome ao canal.');
+  let c;
+  try { c = await sock.newsletterCreate(nome, descricao || null); }
+  catch (e) { throw new Error(/terms|tos|not.?allowed|forbidden|403|401/i.test(e.message) ? 'O WhatsApp ainda não liberou criar canais neste número. Abra o WhatsApp no celular › Atualizações › + › Criar canal, aceite os termos uma vez e tente de novo.' : `O WhatsApp não criou o canal: ${e.message}`); }
+  if (foto?.length) await sock.newsletterUpdatePicture(c.id, foto).catch(e => console.error('[canal] foto:', e.message));
+  const invite = `https://whatsapp.com/channel/${c.invite}`;
+  if (usarNoRobo) { const p = loadPromos(); if (!p.destinos.some(d => d.jid === c.id)) { p.destinos.push({ tipo: 'canal', invite, jid: c.id, nome }); savePromos(p); } }
+  return { id: c.id, nome, invite };
 }

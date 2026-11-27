@@ -312,6 +312,7 @@
     <button class="btn text" id="pr-voltar"><span class="ms">arrow_back</span>Meu bot</button>
     <h2 class="section-title" style="margin:8px 0 4px">Robô de promoções</h2>
     <p class="muted" style="margin:0 0 8px">Posta ofertas com o <b>seu</b> link de afiliado. Ninguém precisa de senha: cada loja te dá um código no painel de afiliado, e você cola aqui.</p>
+    <a class="btn tonal" href="afiliados.html" target="_blank" rel="noopener"><span class="ms">school</span>Tutorial: como fazer link de afiliado</a>
 
     <form id="pr-form">
       <ul class="opcoes">
@@ -325,6 +326,23 @@
       <button type="button" class="linkbtn" id="pr-todos" hidden></button>
       <ul class="opcoes" id="pr-canais"></ul>
       <div class="row"><label class="field"><input id="pr-canal-link" placeholder=" " inputmode="url"><span>Link do canal (https://whatsapp.com/channel/…)</span></label><button type="button" class="btn tonal" id="pr-canal-add"><span class="ms">add</span>Adicionar canal</button></div>
+      <details class="novo-canal" id="pr-novo-canal">
+        <summary><span class="ms">add_circle</span>Ainda não tem canal? Criar um agora</summary>
+        <div class="nc-corpo">
+          <label class="nc-foto" title="Foto do canal">
+            <img id="nc-prev" src="icons/icon-192.png" alt="Foto do canal">
+            <span class="nc-trocar"><span class="ms">photo_camera</span>Foto</span>
+            <input type="file" id="nc-foto" accept="image/*" hidden>
+          </label>
+          <div class="nc-campos">
+            <label class="field"><input id="nc-nome" maxlength="100" placeholder=" "><span>Nome do canal (ex.: Promos do Nick)</span></label>
+            <label class="field ed-field"><textarea id="nc-desc" rows="3" maxlength="2048" placeholder=" "></textarea><span>Descrição</span></label>
+            <p class="muted small">O canal é criado no seu número e já entra no robô de promoções. Você é o dono e pode mudar tudo depois no WhatsApp.</p>
+            <button type="button" class="btn filled" id="nc-criar"><span class="ms">campaign</span>Criar canal</button>
+            <p class="gal-dica" id="nc-msg" hidden></p>
+          </div>
+        </div>
+      </details>
 
       <h3 class="painel-sec">Quando e o quê</h3>
       <div class="row">

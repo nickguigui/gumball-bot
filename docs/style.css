@@ -264,3 +264,15 @@ details.guia ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
 #pn-promos .row{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0}
 #pn-promos .row .field{flex:1;min-width:160px}
 #pn-promos .field select{appearance:auto}
+/* criar canal */
+.novo-canal{margin:12px 0}
+.novo-canal summary{display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--primary);font-weight:800;list-style:none}
+.novo-canal summary::-webkit-details-marker{display:none}
+.nc-corpo{display:flex;gap:20px;align-items:flex-start;margin-top:14px;flex-wrap:wrap}
+.nc-foto{position:relative;width:112px;height:112px;border-radius:50%;overflow:hidden;cursor:pointer;flex-shrink:0;background:var(--surface-c-high)}
+.nc-foto img{width:100%;height:100%;object-fit:cover}
+.nc-trocar{position:absolute;inset:auto 0 0 0;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 0 10px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:800}
+.nc-trocar .ms{font-size:16px}
+.nc-campos{flex:1;min-width:240px;display:grid;gap:10px}
+.nc-campos .ed-field textarea{width:100%;padding:22px 16px 8px;border:1px solid var(--outline);border-radius:4px;background:var(--surface);color:var(--on-surface);font:inherit;font-size:16px;resize:vertical;outline:none}
+.nc-campos .ed-field textarea+span{position:absolute;left:16px;top:6px;font-size:12px;color:var(--on-surface-var)}
