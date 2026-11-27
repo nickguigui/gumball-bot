@@ -1,9 +1,11 @@
 #!/bin/sh
-# Publica o codigo novo no servidor: cancela o turno atual (ele salva a sessao ao cancelar) e liga outro.
+# Publica o codigo novo no servidor: cancela o turno atual (ele salva a sessao ao cancelar),
+# cancela turnos na fila (podem estar com codigo antigo) e liga um novo com o codigo de agora.
 export GH_TOKEN=${GH_TOKEN:-$(printf "protocol=https\nhost=github.com\n\n" | GIT_TERMINAL_PROMPT=0 git credential fill 2>/dev/null | sed -n 's/^password=//p')}
 G=${GH:-gh}; [ -x "/c/Program Files/GitHub CLI/gh.exe" ] && G="/c/Program Files/GitHub CLI/gh.exe"
-R=$("$G" run list -R nickguigui/gumball-bot -w servidor.yml -s in_progress -L 1 --json databaseId -q '.[0].databaseId')
-[ -n "$R" ] && "$G" run cancel "$R" -R nickguigui/gumball-bot
-# so dispara se nao houver outro na fila
-sleep 5; P=$("$G" run list -R nickguigui/gumball-bot -w servidor.yml -s pending -L 1 --json databaseId -q '.[0].databaseId'); Q=$("$G" run list -R nickguigui/gumball-bot -w servidor.yml -s queued -L 1 --json databaseId -q '.[0].databaseId')
-[ -z "$P$Q" ] && "$G" workflow run servidor.yml -R nickguigui/gumball-bot && echo "novo turno disparado"
+R=nickguigui/gumball-bot
+for st in pending queued waiting in_progress; do
+  for id in $("$G" run list -R $R -w servidor.yml -s $st -L 5 --json databaseId -q '.[].databaseId'); do "$G" run cancel "$id" -R $R >/dev/null 2>&1 && echo "cancelado $id ($st)"; done
+done
+sleep 5
+"$G" workflow run servidor.yml -R $R && echo "novo turno disparado"
