@@ -17,7 +17,7 @@ const DIR = path.join(process.env.EDITOR_DIR ? path.dirname(process.env.EDITOR_D
 const draftFile = () => path.join(DIR, 'rascunho.json');
 function draft() { try { const d = JSON.parse(fs.readFileSync(draftFile(), 'utf8')); return d.exp > Date.now() ? d : null; } catch { return null; } }
 const saveDraft = d => { fs.mkdirSync(DIR, { recursive: true }); fs.writeFileSync(draftFile(), JSON.stringify(d)); };
-const clearDraft = () => fs.rmSync(DIR, { recursive: true, force: true });
+const clearDraft = () => { try { fs.rmSync(DIR, { recursive: true, force: true, maxRetries: 3 }); } catch { try { fs.rmSync(draftFile(), { force: true }); } catch {} } };
 
 // Coloca a figurinha no rascunho no formato que o WhatsApp aceita em pacotes (512x512, ate 100/500 KB)
 async function addSticker(ctx, m, d) {
@@ -88,7 +88,7 @@ export const commands = [
       const d = draft(); if (!d) return ctx.reply('📦 Nenhum pacote aberto. Use */novopacote Nome*.');
       if (d.figs.length < MIN) return ctx.reply(`📦 O WhatsApp pede pelo menos ${MIN} figurinhas por pacote. Faltam ${MIN - d.figs.length}.`);
       // icone do pacote (96x96, primeiro quadro da primeira figurinha)
-      await sharp(path.join(DIR, d.figs[0].f), { animated: false }).resize(96, 96, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toFile(path.join(DIR, 'tray.png'));
+      await sharp(fs.readFileSync(path.join(DIR, d.figs[0].f)), { animated: false }).resize(96, 96, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toFile(path.join(DIR, 'tray.png'));
       fs.writeFileSync(path.join(DIR, 'pack.json'), JSON.stringify({ nome: d.nome, autor: d.autor, animado: !!d.animado, figurinhas: d.figs }));
       const r = await askManager('galeria-publicar', { dir: DIR }, 180_000);
       clearDraft();
