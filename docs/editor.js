@@ -8,17 +8,25 @@ const fmt = n => n.toFixed(1).replace('.', ',') + ' s';
 
 // ---------- servidor ----------
 let API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8787' : '';
-async function apiBase(force) {
+async function apiBase(force, fresh) {
   if (API && !force) return API;
-  const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/endpoint.json?t=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
-  const j = r?.ok ? await r.json().catch(() => null) : null;
+  // o raw.githubusercontent guarda o arquivo por ate 5 min; a API do GitHub responde sempre o atual
+  const tries = [`https://raw.githubusercontent.com/${REPO}/main/endpoint.json?t=${Date.now()}`, `https://api.github.com/repos/${REPO}/contents/endpoint.json?ref=main`];
+  if (fresh) tries.reverse();
+  let j = null;
+  for (const u of tries) {
+    const r = await fetch(u, { cache: 'no-store', headers: u.includes('api.github') ? { Accept: 'application/vnd.github.raw+json' } : {} }).catch(() => null);
+    j = r?.ok ? await r.json().catch(() => null) : null;
+    if (j?.url) break;
+  }
   if (!j?.url) throw new Error(j?.trocando ? 'O bot está reiniciando. Tente de novo em 2 minutos.' : 'O bot está fora do ar agora. Tente de novo em alguns minutos.');
   return (API = j.url);
 }
 async function api(path, opts = {}) {
   const go = b => fetch(b + path + (path.includes('?') ? '&' : '?') + 't=' + TOKEN, opts);
   let r = await go(await apiBase()).catch(() => null);
-  if (!r || r.status === 502 || r.status === 530) r = await go(await apiBase(true)).catch(() => null);
+  // servidor antigo (trocou de turno) nao conhece o link: busca o endereco atual e tenta de novo
+  if (!r || [404, 410, 502, 530].includes(r.status)) { const old = API; const b = await apiBase(true, true).catch(() => null); if (b && b !== old) r = await go(b).catch(() => null) || r; }
   if (!r) throw new Error('Não consegui falar com o bot. Confira sua internet e tente de novo.');
   return r;
 }
