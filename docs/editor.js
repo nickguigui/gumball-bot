@@ -296,8 +296,10 @@ function setSom(v) {
   const needFile = v === 'mp3' || v === 'outro';
   $('#snd-file').hidden = !(needFile && st.audioFile && st.audioKind === v);
   $('#snd-rec').hidden = v !== 'gravar';
-  $('#snd-len').hidden = st.kind === 'video' || !['mp3', 'outro', 'gravar'].includes(v);
+  $('#snd-len').hidden = st.kind === 'video' || !['mp3', 'outro', 'gravar', 'original'].includes(v);
   $('#snd-play').hidden = v === 'nenhum' || ((needFile || v === 'gravar') && !(st.audioFile && st.audioKind === v));
+  if (v === 'original' && st.origSound) { aud.src = st.origSound; const sec = meta?.figurinha?.somSeg || 10; $('#snd-dur').max = Math.min(30, Math.max(1, sec)); st.sDur = Math.min(30, Math.max(1, sec)); $('#snd-dur').value = st.sDur; $('#snd-dur-o').textContent = st.sDur + ' s'; st.sStart = 0; }
+  else if (st.audioFile && (needFile || v === 'gravar') && st.audioKind === v) aud.src = URL.createObjectURL(st.audioFile);
   if (st.video) st.video.muted = v !== 'video';
   if (needFile && !(st.audioFile && st.audioKind === v)) { const inp = v === 'mp3' ? $('#file-mp3') : $('#file-outro'); inp.value = ''; inp.click(); }
 }
@@ -321,7 +323,7 @@ $('#snd-play').onclick = () => {
   clearTimeout(playT);
   if (st.som === 'video' && st.video) { st.video.currentTime = st.vStart; st.video.muted = false; st.video.play(); return; }
   const len = st.kind === 'video' ? st.vDur : st.sDur;
-  aud.currentTime = st.som === 'gravar' ? 0 : st.sStart; aud.play();
+  aud.currentTime = st.som === 'gravar' || st.som === 'original' ? 0 : st.sStart; aud.play();
   if (st.kind === 'video' && st.video) { st.video.currentTime = st.vStart; st.video.play(); }
   playT = setTimeout(() => aud.pause(), len * 1000);
 };
@@ -364,7 +366,7 @@ $('#send').onclick = async () => {
   const btn = $('#send'); btn.disabled = true;
   try {
     if (['mp3', 'outro', 'gravar'].includes(st.som) && !st.audioFile) throw new Error('Escolha ou grave o áudio primeiro (ou marque "Sem som").');
-    const opts = { tipo: st.kind === 'video' ? 'video' : 'image', som: st.som === 'video' ? 'video' : st.som === 'nenhum' ? 'nenhum' : 'arquivo', pacote: $('#pack').value.trim(), autor: $('#author').value.trim() };
+    const opts = { tipo: st.kind === 'video' ? 'video' : 'image', som: ['video', 'nenhum', 'original'].includes(st.som) ? st.som : 'arquivo', pacote: $('#pack').value.trim(), autor: $('#author').value.trim() };
     if (st.kind === 'video') {
       say('Preparando o desenho…');
       await upload('overlay', await exportCanvas(false), 'png');
@@ -378,6 +380,7 @@ $('#send').onclick = async () => {
       // com fundo transparente e "so desenho", o fundo fica vazio mesmo
       await upload('final', await exportCanvas(true), 'png');
     }
+    if (opts.som === 'original') Object.assign(opts, { somInicio: 0, somDuracao: st.sDur });
     if (opts.som === 'arquivo') {
       if (st.uploadedAudio !== st.audioFile) { await upload('audio', st.audioFile, extOf(st.audioName, st.audioFile.type), p => say(`Enviando o áudio… ${Math.round(p * 100)}%`)); st.uploadedAudio = st.audioFile; }
       Object.assign(opts, { somInicio: st.som === 'gravar' ? 0 : st.sStart, somDuracao: st.sDur });
@@ -388,6 +391,43 @@ $('#send').onclick = async () => {
   } catch (e) { say(e.message || 'Deu erro. Tente de novo.', 'err'); }
   btn.disabled = false;
 };
+
+// ---------- figurinha pronta desmontada (/abrirfig) ----------
+async function blobOf(arquivo) { const r = await api('/api/fig/midia' + (arquivo ? `?arquivo=${arquivo}` : '')); if (!r.ok) throw new Error('Não consegui baixar esse arquivo.'); return r.blob(); }
+function baixar(blob, nome) {
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: nome });
+  document.body.append(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.parentNode?.removeChild(a); }, 2000);
+}
+async function showPecas() {
+  const f = meta.figurinha; $('#pecas').hidden = false; $('#pick-title').hidden = false;
+  $('#ed-start h1').textContent = 'Peças da figurinha';
+  $('#pc-img').src = URL.createObjectURL(await blobOf('original.webp'));
+  const chips = [f.animada ? '🎞️ Animada' : '🖼️ Estática', f.comSom ? `🔊 Com som (${f.somSeg || '?'} s)` : '🔇 Sem som', f.avatar && '🧑 Avatar', f.ia && '✨ Feita com IA'].filter(Boolean);
+  $('#pc-chips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const dados = [['Pacote', f.pacote || '—'], ['Autor', f.autor || '—'], ['Emojis', f.emojis || '—'], ['Tamanho', `${f.kb} KB · ${f.largura}×${f.altura}`], f.animada && ['Animação', `${f.quadros} quadros · ${String(f.duracao).replace('.', ',')} s`]].filter(Boolean);
+  $('#pc-dados').innerHTML = dados.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+  if (f.comSom) {
+    st.origSound = URL.createObjectURL(await blobOf(meta.arquivos.includes('som.mp3') ? 'som.mp3' : 'som.ogg'));
+    $('#pc-audio').src = st.origSound; $('#pc-som').hidden = false; $('#pc-mudo').hidden = false;
+    $$('.orig-only').forEach(e => { e.hidden = false; });
+  }
+  const nome = (f.pacote || 'figurinha').replace(/[^\p{L}\p{N}]+/gu, '-').slice(0, 40) || 'figurinha';
+  const itens = [['original.webp', 'Figurinha (.webp)', 'sticky_note_2'], [null, f.animada ? 'Animação (.mp4)' : 'Imagem (.png)', f.animada ? 'movie' : 'image'], ['som.mp3', 'Som (.mp3)', 'music_note'], ['som.ogg', 'Som (.ogg)', 'graphic_eq']]
+    .filter(([a]) => a === null || meta.arquivos.includes(a));
+  $('#pc-baixar').innerHTML = itens.map(([a, label, icon], i) => `<button class="btn outlined small" data-i="${i}"><span class="ms">${icon}</span>${label}</button>`).join('');
+  $('#pc-baixar').onclick = async e => {
+    const b = e.target.closest('button'); if (!b) return; const [a] = itens[b.dataset.i];
+    b.disabled = true;
+    try { baixar(await blobOf(a), a ? `${nome}.${a.split('.').pop()}` : `${nome}.${f.animada ? 'mp4' : 'png'}`); } catch (err) { alert(err.message); }
+    b.disabled = false;
+  };
+  const abrir = async som => { await start(meta.base, { base: true }); const r = $(`input[name=som][value=${som}]`); if (r) { r.checked = true; setSom(som); } };
+  $('#pc-editar').onclick = () => abrir(f.comSom ? 'original' : 'nenhum');
+  $('#pc-trocar').onclick = () => abrir('mp3');
+  $('#pc-mudo').onclick = async () => { await abrir('nenhum'); say('Sem som. Toque em "Mandar no WhatsApp" para receber a figurinha muda.'); };
+}
 
 // ---------- abrir ----------
 function showMsg(text, loading, error) {
@@ -400,7 +440,8 @@ function showMsg(text, loading, error) {
     meta = await apiJson('/api/fig');
     $('#ed-chat').textContent = meta.chat ? `A figurinha vai para: ${meta.chat === 'conversa privada' ? 'a conversa onde você pediu' : `"${meta.chat}"`}` : '';
     if (meta.pacote) $('#pack').value = meta.pacote; if (meta.autor) $('#author').value = meta.autor;
-    if (meta.base) { $('#pk-base').hidden = false; $('#pk-base-sub').textContent = meta.base === 'video' ? 'Vídeo ou figurinha animada' : 'Imagem'; }
+    if (meta.figurinha) await showPecas(); else $('#pick-title').hidden = true;
+    if (meta.base && !meta.figurinha) { $('#pk-base').hidden = false; $('#pk-base-sub').textContent = meta.base === 'video' ? 'Vídeo ou figurinha animada' : 'Imagem'; }
     $('#ed-msg').hidden = true; $('#ed-start').hidden = false;
     requestAnimationFrame(render);
     // ja carrega as fontes do texto

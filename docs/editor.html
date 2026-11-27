@@ -31,6 +31,24 @@
   <section id="ed-start" hidden>
     <h1>O que vai virar figurinha?</h1>
     <p class="muted" id="ed-chat"></p>
+    <!-- figurinha pronta desmontada (/abrirfig) -->
+    <div id="pecas" class="pecas" hidden>
+      <img id="pc-img" alt="A figurinha original">
+      <div class="pc-info">
+        <div class="chips" id="pc-chips"></div>
+        <dl id="pc-dados"></dl>
+        <div id="pc-som" hidden><audio id="pc-audio" controls preload="none"></audio></div>
+        <h2>Baixar as peças</h2>
+        <div class="seg" id="pc-baixar"></div>
+        <h2>O que fazer com ela</h2>
+        <div class="seg">
+          <button class="btn filled" id="pc-editar"><span class="ms">edit</span>Editar (desenho, texto, som)</button>
+          <button class="btn tonal" id="pc-trocar"><span class="ms">swap_horiz</span>Trocar o som</button>
+          <button class="btn tonal" id="pc-mudo" hidden><span class="ms">volume_off</span>Tirar o som</button>
+        </div>
+      </div>
+    </div>
+    <h2 id="pick-title" class="pick-title">Ou comece de outra mídia</h2>
     <div class="ed-pick">
       <button class="ed-card" id="pk-base" hidden><span class="ms">reply</span><b>A que você respondeu</b><small id="pk-base-sub">Já está aqui</small></button>
       <button class="ed-card" data-pick="image"><span class="ms">image</span><b>Foto</b><small>Do celular ou computador</small></button>
@@ -130,6 +148,7 @@
         <h2>Som da figurinha</h2>
         <div class="seg col" id="snd">
           <label><input type="radio" name="som" value="nenhum" checked><span class="ms">volume_off</span>Sem som</label>
+          <label class="orig-only" hidden><input type="radio" name="som" value="original"><span class="ms">graphic_eq</span>Som original da figurinha</label>
           <label class="vid-only"><input type="radio" name="som" value="video"><span class="ms">movie</span>Som do próprio vídeo</label>
           <label><input type="radio" name="som" value="mp3"><span class="ms">music_note</span>Arquivo de áudio (MP3…)</label>
           <label><input type="radio" name="som" value="outro"><span class="ms">video_file</span>Áudio de outro vídeo (MP4…)</label>

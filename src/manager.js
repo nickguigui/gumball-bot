@@ -247,10 +247,18 @@ const routes = {
   'GET /api/fig': async (req, url) => {
     const m = figMeta(url); if (!m) return [410, { erro: 'Esse link expirou ou o bot reiniciou. Mande /editarfig de novo no WhatsApp.' }];
     const p = procs.get(m.phone);
-    return [200, { chat: m.chatName, expira: m.exp, base: m.base?.kind || null, pacote: m.pack, autor: m.author, feitas: m.made, online: p?.state === 'connected' }];
+    return [200, { chat: m.chatName, expira: m.exp, base: m.base?.kind || null, pacote: m.pack, autor: m.author, feitas: m.made, online: p?.state === 'connected', figurinha: m.figurinha || null, arquivos: m.files || [] }];
   },
   'GET /api/fig/midia': async (req, url) => {
-    const m = figMeta(url); if (!m?.base) return [404, { erro: 'Sem mídia.' }];
+    const m = figMeta(url); if (!m) return [404, { erro: 'Sem mídia.' }];
+    // ?arquivo=original.webp|som.ogg|som.mp3 (pecas da figurinha); sem nada = a midia base
+    const nome = url.searchParams.get('arquivo');
+    if (nome) {
+      if (!(m.files || []).includes(nome)) return [404, { erro: 'Esse arquivo não existe.' }];
+      const tipo = { webp: 'image/webp', ogg: 'audio/ogg', mp3: 'audio/mpeg' }[nome.split('.').pop()] || 'application/octet-stream';
+      return [200, fs.readFileSync(path.join(figDir(url.searchParams.get('t')), nome)), tipo];
+    }
+    if (!m.base) return [404, { erro: 'Sem mídia.' }];
     const f = path.join(figDir(url.searchParams.get('t')), m.base.file);
     return [200, fs.readFileSync(f), m.base.kind === 'video' ? 'video/mp4' : 'image/' + (m.base.file.endsWith('png') ? 'png' : 'jpeg')];
   },

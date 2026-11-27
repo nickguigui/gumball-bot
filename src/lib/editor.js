@@ -21,11 +21,13 @@ const ok = t => /^[A-Za-z0-9_-]{20,40}$/.test(t || '');
 export const tokenDir = t => (ok(t) ? path.join(EDITOR_DIR, t) : null);
 
 // Cria o link. base = { buffer, ext, kind: 'image'|'video' } (midia que a pessoa respondeu), opcional
-export function createToken({ jid, chatName, base, pack, author }) {
+export function createToken({ jid, chatName, base, pack, author, files, figurinha }) {
   const t = crypto.randomBytes(18).toString('base64url');
   const d = tokenDir(t); fs.mkdirSync(d, { recursive: true });
   if (base) fs.writeFileSync(path.join(d, `base.${base.ext}`), base.buffer);
-  const meta = { phone: config.owners[0] || '', jid, chatName: chatName || '', exp: Date.now() + TTL, base: base ? { file: `base.${base.ext}`, kind: base.kind } : null, pack: pack || '', author: author || '', made: 0 };
+  // pecas de uma figurinha pronta (original.webp, som.ogg, som.mp3) para baixar no site
+  for (const [name, buf] of Object.entries(files || {})) if (buf && /^[a-z]+\.[a-z0-9]+$/.test(name)) fs.writeFileSync(path.join(d, name), buf);
+  const meta = { phone: config.owners[0] || '', jid, chatName: chatName || '', exp: Date.now() + TTL, base: base ? { file: `base.${base.ext}`, kind: base.kind } : null, pack: pack || '', author: author || '', made: 0, figurinha: figurinha || null, files: Object.keys(files || {}).filter(k => files[k]) };
   fs.writeFileSync(path.join(d, 'meta.json'), JSON.stringify(meta));
   return t;
 }
@@ -91,6 +93,10 @@ export async function makeSticker(sock, t, o = {}) {
     if (o.som === 'video' && kind === 'video') {
       const src = upload(d, 'video') || path.join(d, meta.base.file);
       ogg = await sound(src, num(o.inicio, 0, 36000, 0), secs, work);
+    } else if (o.som === 'original') {
+      const a = path.join(d, 'som.ogg'); if (!fs.existsSync(a)) throw new Error('Essa figurinha não tinha som.');
+      const dur = kind === 'video' ? secs : num(o.somDuracao, 1, 30, meta.figurinha?.somSeg || 10);
+      ogg = await sound(a, num(o.somInicio, 0, 36000, 0), dur, work); secs = dur;
     } else if (o.som === 'arquivo') {
       const a = upload(d, 'audio'); if (!a) throw new Error('O áudio não chegou. Tente de novo.');
       const dur = kind === 'video' ? secs : num(o.somDuracao, 1, 30, 10);
