@@ -75,3 +75,18 @@ Grupo: menu, ping, medidores, piada, quiz, forca, bandeira, charada, daily, mine
 ## YouTube (/play, /ytmp4) — resolvido
 O YouTube bloqueia os servidores do GitHub. Agora o bot usa os cookies da sua conta secundária (Secret `YTDLP_COOKIES`, fora do código) e o servidor instala o Deno (o yt-dlp precisa dele para os links do YouTube). Também corrigi o ffmpeg, que não era encontrado. Testado: `/play` por nome e por link mandam o áudio; `/ytmp4` manda o vídeo.
 Quando os cookies vencerem (semanas ou meses), o bot avisa "O YouTube está bloqueando o servidor": é só exportar de novo numa janela anônima e me passar o arquivo.
+
+---
+
+# Editor de figurinhas (27/11)
+
+Mande **/editarfig** no WhatsApp (ou responda uma foto, vídeo ou figurinha com /editarfig) e o bot manda um link só seu, que vale 30 minutos. O editor não aparece nas abas do site.
+
+- **Mídia:** a que você respondeu, uma foto, um vídeo/GIF ou só desenho (fundo transparente).
+- **Ferramentas:** pintar (cores e tamanho), borracha (apaga só o desenho), texto (6 fontes, cor, contorno, tamanho, arrastar), emojis, desfazer/refazer, zoom com dois dedos ou rodinha, girar, espelhar, brilho/contraste/saturação, fundo transparente/branco/preto/cor.
+- **Vídeo:** escolhe o trecho (início e duração, até 8 s).
+- **Som:** sem som, som do próprio vídeo, arquivo de áudio (MP3…), áudio de outro vídeo (MP4…) ou gravar na hora pelo microfone; dá para escolher de onde o som começa e ouvir antes.
+- **Mandar no WhatsApp:** o bot monta a figurinha (com ou sem som) e manda no chat onde você pediu.
+- Testado ao vivo no grupo "Eu ;-;": foto com desenho, texto e som de arquivo; vídeo com texto e som do próprio vídeo. O microfone não deu para testar daqui (precisa de você).
+
+Também corrigido: o servidor às vezes conectava e ficava "surdo" (o WhatsApp não liberava as mensagens pendentes). Agora um vigia libera e, se preciso, reconecta sozinho.
