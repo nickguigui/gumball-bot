@@ -124,4 +124,17 @@ export const commands = [
       return ctx.reply(`📢 *Canal criado!*\n\n*${r.nome}*\n🔗 ${r.invite}\n\n✅ Já está no robô de promoções. Ligue com */promocoes ligar* (ou no site).\n💡 Compartilhe o link para as pessoas seguirem.`);
     },
   },
+  {
+    // apaga um canal do proprio numero (pede confirmacao) e tira do robo de promocoes
+    name: 'apagarcanal', category: C, react: '🗑️', run: async ctx => {
+      const l = linkDe(ctx.q);
+      if (!/whatsapp\.com\/channel\//.test(l || '')) return ctx.reply('🗑️ *Uso:* /apagarcanal <link do canal> confirmar\n⚠️ Apaga o canal de vez, com todas as mensagens e seguidores. Só funciona em canal que é seu.');
+      let meta; try { meta = await ctx.sock.newsletterMetadata('invite', l.split('/').pop().split('?')[0]); } catch { return ctx.reply('🗑️ Não achei esse canal.'); }
+      const nome = meta.thread_metadata?.name?.text || meta.name || 'canal';
+      if (!/\bconfirmar\b/i.test(ctx.q)) return ctx.reply(`🗑️ Vai apagar o canal *${nome}* de vez (mensagens e seguidores). Para confirmar: */apagarcanal ${l} confirmar*`);
+      try { await ctx.sock.newsletterDelete(meta.id); } catch (e) { return ctx.reply(`🗑️ O WhatsApp não deixou apagar (${e.message}). Só o dono do canal pode apagar.`); }
+      const p = loadPromos(); p.destinos = p.destinos.filter(d => d.jid !== meta.id && d.invite !== l); savePromos(p);
+      return ctx.reply(`🗑️ Canal *${nome}* apagado.`);
+    },
+  },
 ];
