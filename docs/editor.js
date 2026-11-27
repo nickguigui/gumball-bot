@@ -366,7 +366,7 @@ $('#send').onclick = async () => {
   const btn = $('#send'); btn.disabled = true;
   try {
     if (['mp3', 'outro', 'gravar'].includes(st.som) && !st.audioFile) throw new Error('Escolha ou grave o áudio primeiro (ou marque "Sem som").');
-    const opts = { tipo: st.kind === 'video' ? 'video' : 'image', som: ['video', 'nenhum', 'original'].includes(st.som) ? st.som : 'arquivo', pacote: $('#pack').value.trim(), autor: $('#author').value.trim() };
+    const opts = { tipo: st.kind === 'video' ? 'video' : 'image', som: ['video', 'nenhum', 'original'].includes(st.som) ? st.som : 'arquivo', pacote: $('#pack').value.trim(), autor: $('#author').value.trim(), noPacote: !$('#no-pacote').hidden && $('#no-pacote-cb').checked };
     if (st.kind === 'video') {
       say('Preparando o desenho…');
       await upload('overlay', await exportCanvas(false), 'png');
@@ -387,7 +387,8 @@ $('#send').onclick = async () => {
     }
     say(st.kind === 'video' ? 'Montando a figurinha animada… (uns 10 segundos)' : 'Montando a figurinha…');
     const r = await apiJson('/api/fig/criar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(opts) });
-    say(`✓ Pronto! A figurinha${r.comSom ? ' com som' : ''} chegou ${meta.chat && meta.chat !== 'conversa privada' ? `no grupo "${meta.chat}"` : 'no WhatsApp'}.`, 'ok');
+    const pk = r.pacote ? (r.pacote.erro ? ` Não entrou no pacote: ${r.pacote.erro}` : ` E entrou no pacote "${r.pacote.nome}" (${r.pacote.n}/30).`) : '';
+    say(`✓ Pronto! A figurinha${r.comSom ? ' com som' : ''} chegou ${meta.chat && meta.chat !== 'conversa privada' ? `no grupo "${meta.chat}"` : 'no WhatsApp'}.${pk}`, 'ok');
   } catch (e) { say(e.message || 'Deu erro. Tente de novo.', 'err'); }
   btn.disabled = false;
 };
@@ -440,6 +441,7 @@ function showMsg(text, loading, error) {
     meta = await apiJson('/api/fig');
     $('#ed-chat').textContent = meta.chat ? `A figurinha vai para: ${meta.chat === 'conversa privada' ? 'a conversa onde você pediu' : `"${meta.chat}"`}` : '';
     if (meta.pacote) $('#pack').value = meta.pacote; if (meta.autor) $('#author').value = meta.autor;
+    if (meta.pacoteAberto) { $('#no-pacote').hidden = false; $('#no-pacote-txt').textContent = `Também colocar no pacote "${meta.pacoteAberto.nome}" (${meta.pacoteAberto.qtd}/30)`; }
     if (meta.figurinha) await showPecas(); else $('#pick-title').hidden = true;
     if (meta.base && !meta.figurinha) { $('#pk-base').hidden = false; $('#pk-base-sub').textContent = meta.base === 'video' ? 'Vídeo ou figurinha animada' : 'Imagem'; }
     $('#ed-msg').hidden = true; $('#ed-start').hidden = false;

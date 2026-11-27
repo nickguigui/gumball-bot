@@ -90,3 +90,24 @@ Mande **/editarfig** no WhatsApp (ou responda uma foto, vídeo ou figurinha com 
 - Testado ao vivo no grupo "Eu ;-;": foto com desenho, texto e som de arquivo; vídeo com texto e som do próprio vídeo. O microfone não deu para testar daqui (precisa de você).
 
 Também corrigido: o servidor às vezes conectava e ficava "surdo" (o WhatsApp não liberava as mensagens pendentes). Agora um vigia libera e, se preciso, reconecta sozinho.
+
+---
+
+# Figurinhas prontas, galeria e app (27/11)
+
+## /abrirfig — "Acrobat de figurinhas"
+Responda qualquer figurinha (de quem for, feita no site ou não) com **/abrirfig** (ou /editarfig). O link abre a tela **Peças da figurinha**:
+- Mostra tudo: animada ou parada, se tem som (e quanto dura), pacote, autor, emojis, tamanho, quadros e duração.
+- **Baixar cada peça**: a figurinha original (.webp), a imagem (.png) ou a animação (.mp4), o som (.mp3 e .ogg).
+- **Editar** mantendo o som original, **Trocar o som** (MP3, outro vídeo, gravar) ou **Tirar o som**.
+
+## Galeria de figurinhas (aba "Figurinhas" do site, estilo sticker.ly)
+- **Publicar pelo WhatsApp**: `/novopacote Nome` → mande as figurinhas na mesma conversa (entram sozinhas; com som continua com som; de outra pessoa: responda com `/addfig`) → `/publicarpacote`. De 3 a 30 figurinhas, sem misturar animadas com paradas (regra do WhatsApp). `/rascunho`, `/cancelarpacote`, `/meuspacotes`, `/apagarpacote código`.
+- **No site**: busca, filtros (com som, animados, parados), ouvir o som de cada figurinha, baixar uma ou o pacote todo (.zip), compartilhar o link, **Mandar no meu WhatsApp** (o comando `/baixarpacote código` faz o seu Gumball mandar todas, **com som**) e **Adicionar ao WhatsApp** (pelo app Android).
+- **Denúncias**: botão em cada pacote. Você recebe o aviso na sua conversa "Você"; com 3 denúncias de pessoas diferentes o pacote some até você decidir (`/apagarpacote código` ou `/mostrarpacote código`). Você pode apagar qualquer pacote; os outros só apagam os próprios.
+- Os pacotes ficam no ramo `galeria` do GitHub. Já tem 2 pacotes originais: "Reações brat" e "Reações com som" (sons sintetizados, sem direito autoral de ninguém).
+
+## Apps
+- **Android**: APK "Gumball Figurinhas" (baixe na aba Figurinhas, botão "Baixar o app Android"). Abre a galeria e o botão **Adicionar ao WhatsApp** coloca o pacote direto no WhatsApp, como o sticker.ly. Assinado com uma chave só sua (`app/gumball-release.jks`, senha em `secrets.txt`, os dois fora do GitHub): **não perca esse arquivo**, sem ele as próximas versões não instalam por cima.
+- **iPhone**: o site instala como app (Compartilhar → Adicionar à Tela de Início). App na App Store precisa de Mac e da conta paga da Apple.
+- ⚠️ Pelo app, o **som** das figurinhas não entra no pacote (o WhatsApp não aceita pacote de app com som). Com som: "Mandar no meu WhatsApp" / `/baixarpacote`.

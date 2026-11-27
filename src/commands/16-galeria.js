@@ -20,7 +20,7 @@ const saveDraft = d => { fs.mkdirSync(DIR, { recursive: true }); fs.writeFileSyn
 const clearDraft = () => { try { fs.rmSync(DIR, { recursive: true, force: true, maxRetries: 3 }); } catch { try { fs.rmSync(draftFile(), { force: true }); } catch {} } };
 
 // Coloca a figurinha no rascunho no formato que o WhatsApp aceita em pacotes (512x512, ate 100/500 KB)
-async function addSticker(ctx, m, d) {
+async function addSticker(ctx, m, d, somPronto) {
   if (d.figs.length >= MAX) throw new UserError(`📦 O pacote já tem ${MAX} figurinhas (o máximo do WhatsApp). Mande */publicarpacote*.`);
   const animada = isAnimatedWebp(m.buffer);
   if (d.animado === null) d.animado = animada;
@@ -36,12 +36,18 @@ async function addSticker(ctx, m, d) {
   }
   const n = String(d.figs.length + 1).padStart(2, '0');
   fs.writeFileSync(path.join(DIR, `${n}.webp`), webp);
-  const som = await stickerSound(m.raw).catch(() => null);
+  const som = somPronto || await stickerSound(m.raw).catch(() => null);
   if (som) fs.writeFileSync(path.join(DIR, `${n}.ogg`), som.buffer);
   const emojis = (readExif(m.buffer)?.emojis || []).filter(e => typeof e === 'string').slice(0, 3);
   d.figs.push({ f: `${n}.webp`, som: som ? `${n}.ogg` : null, somSeg: som?.seconds || 0, emojis: emojis.length ? emojis : ['🙂'], animada });
   saveDraft(d);
   return d.figs.length;
+}
+
+// Editor do site: a figurinha montada tambem entra no pacote aberto (se houver)
+export async function bufferToDraft(webp, ogg, seconds) {
+  const d = draft(); if (!d) return null;
+  return addSticker(null, { buffer: webp, raw: {} }, d, ogg ? { buffer: ogg, seconds } : null).then(n => ({ n, nome: d.nome }), e => ({ erro: e.userMessage || e.message }));
 }
 
 // Chamado pelo handler: com um pacote aberto, toda figurinha que o dono manda naquele chat entra nele

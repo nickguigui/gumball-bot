@@ -103,8 +103,12 @@ export async function makeSticker(sock, t, o = {}) {
       ogg = await sound(a, num(o.somInicio, 0, 36000, 0), dur, work); secs = dur;
     }
     if (ogg) await attachSound(sock, webp, ogg, secs);
+    if (o.noPacote) { // tambem vai para o pacote aberto da galeria (/novopacote)
+      const { bufferToDraft } = await import('../commands/16-galeria.js');
+      var pacote = await bufferToDraft(webp, ogg, secs || 5).catch(e => ({ erro: e.message }));
+    }
     await sock.sendMessage(meta.jid, { sticker: webp });
     meta.made++; fs.writeFileSync(path.join(d, 'meta.json'), JSON.stringify(meta));
-    return { ok: true, comSom: !!ogg, tamanho: webp.length, chat: meta.chatName };
+    return { ok: true, comSom: !!ogg, tamanho: webp.length, chat: meta.chatName, pacote: typeof pacote === 'undefined' ? null : pacote };
   } finally { fs.rmSync(work, { recursive: true, force: true }); }
 }
