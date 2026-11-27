@@ -119,12 +119,19 @@
       </div>
       <div class="panel" id="p-move">
         <h2 id="move-title">Enquadrar</h2>
-        <label class="slider">Zoom <input type="range" id="zoom" min="10" max="400" value="100"><output id="zoom-o">100%</output></label>
-        <div class="seg">
-          <button class="btn tonal small" id="fit-contain"><span class="ms">fit_screen</span>Inteira</button>
-          <button class="btn tonal small" id="fit-cover"><span class="ms">crop_square</span>Preencher</button>
-          <button class="btn tonal small img-only" id="rotate"><span class="ms">rotate_90_degrees_cw</span>Girar</button>
-          <button class="btn tonal small img-only" id="flip"><span class="ms">flip</span>Espelhar</button>
+        <div class="formato" id="formato" role="radiogroup" aria-label="Formato da figurinha">
+          <button type="button" role="radio" data-f="recortar" aria-checked="false"><span class="ms">crop</span>Recortar</button>
+          <button type="button" role="radio" data-f="esticar" aria-checked="false"><span class="ms">open_in_full</span>Esticar</button>
+          <button type="button" role="radio" data-f="inteira" aria-checked="true"><span class="ms">fit_screen</span>Inteira</button>
+        </div>
+        <p class="muted small" id="formato-dica">Do jeito que está, com bordas transparentes. Arraste para mover e use o zoom.</p>
+        <button type="button" class="btn filled small" id="recorte-ok" hidden><span class="ms">check</span>Pronto, usar este recorte</button>
+        <div id="ajuste-livre">
+          <label class="slider">Zoom <input type="range" id="zoom" min="10" max="400" value="100"><output id="zoom-o">100%</output></label>
+        </div>
+        <div class="seg img-only">
+          <button class="btn tonal small" id="rotate"><span class="ms">rotate_90_degrees_cw</span>Girar</button>
+          <button class="btn tonal small" id="flip"><span class="ms">flip</span>Espelhar</button>
         </div>
         <div class="img-only adjust">
           <label class="slider">Brilho <input type="range" id="f-bri" min="50" max="150" value="100"><output>100</output></label>

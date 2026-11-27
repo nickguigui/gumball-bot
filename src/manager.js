@@ -262,7 +262,7 @@ const routes = {
   'GET /api/fig': async (req, url) => {
     const m = figMeta(url); if (!m) return [410, { erro: 'Esse link expirou ou o bot reiniciou. Mande /editarfig de novo no WhatsApp.' }];
     const p = procs.get(m.phone);
-    return [200, { chat: m.chatName, expira: m.exp, base: m.base?.kind || null, pacote: m.pack, autor: m.author, feitas: m.made, online: p?.state === 'connected', figurinha: m.figurinha || null, arquivos: m.files || [], pacoteAberto: (() => { try { const d = JSON.parse(fs.readFileSync(path.join(path.dirname(EDITOR_DIR), 'gumball-rascunho', m.phone, 'rascunho.json'), 'utf8')); return d.exp > Date.now() ? { nome: d.nome, qtd: d.figs.length, animado: d.animado } : null; } catch { return null; } })() }];
+    return [200, { chat: m.chatName, expira: m.exp, base: m.base?.kind || null, pacote: m.pack, autor: m.author, feitas: m.made, online: p?.state === 'connected', figurinha: m.figurinha || null, arquivos: m.files || [], modo: m.modo || null, mudo: !!m.mudo, pacoteAberto: (() => { try { const d = JSON.parse(fs.readFileSync(path.join(path.dirname(EDITOR_DIR), 'gumball-rascunho', m.phone, 'rascunho.json'), 'utf8')); return d.exp > Date.now() ? { nome: d.nome, qtd: d.figs.length, animado: d.animado } : null; } catch { return null; } })() }];
   },
   'GET /api/fig/midia': async (req, url) => {
     const m = figMeta(url); if (!m) return [404, { erro: 'Sem mídia.' }];

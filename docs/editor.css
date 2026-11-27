@@ -99,6 +99,12 @@ details.panel[open] summary{margin-bottom:12px}
   .send-msg.err{border-radius:12px}
 }
 .row-sw:has(.bgs){flex-direction:column;align-items:flex-start;gap:8px;margin-top:8px}
+/* formato: recortar / esticar / inteira */
+.formato{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 8px}
+.formato button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:16px;border:1px solid var(--outline-var);background:none;color:var(--on-surface-var);font:800 13px 'Nunito',sans-serif;cursor:pointer}
+.formato button .ms{font-size:24px}
+.formato button[aria-checked="true"]{background:var(--secondary-container);color:var(--on-secondary-container);border-color:transparent}
+#formato-dica{margin:0 0 8px}
 /* figurinha pronta desmontada */
 .pecas{display:grid;grid-template-columns:minmax(160px,260px) 1fr;gap:24px;align-items:start;margin:20px 0 8px;padding-bottom:24px;border-bottom:1px solid var(--outline-var)}
 @media (max-width:640px){.pecas{grid-template-columns:1fr}}

@@ -21,13 +21,13 @@ const ok = t => /^[A-Za-z0-9_-]{20,40}$/.test(t || '');
 export const tokenDir = t => (ok(t) ? path.join(EDITOR_DIR, t) : null);
 
 // Cria o link. base = { buffer, ext, kind: 'image'|'video' } (midia que a pessoa respondeu), opcional
-export function createToken({ jid, chatName, base, pack, author, files, figurinha }) {
+export function createToken({ jid, chatName, base, pack, author, files, figurinha, modo, mudo }) {
   const t = crypto.randomBytes(18).toString('base64url');
   const d = tokenDir(t); fs.mkdirSync(d, { recursive: true });
   if (base) fs.writeFileSync(path.join(d, `base.${base.ext}`), base.buffer);
   // pecas de uma figurinha pronta (original.webp, som.ogg, som.mp3) para baixar no site
   for (const [name, buf] of Object.entries(files || {})) if (buf && /^[a-z]+\.[a-z0-9]+$/.test(name)) fs.writeFileSync(path.join(d, name), buf);
-  const meta = { phone: config.owners[0] || '', jid, chatName: chatName || '', exp: Date.now() + TTL, base: base ? { file: `base.${base.ext}`, kind: base.kind } : null, pack: pack || '', author: author || '', made: 0, figurinha: figurinha || null, files: Object.keys(files || {}).filter(k => files[k]) };
+  const meta = { phone: config.owners[0] || '', jid, chatName: chatName || '', exp: Date.now() + TTL, base: base ? { file: `base.${base.ext}`, kind: base.kind } : null, pack: pack || '', author: author || '', made: 0, modo: modo || null, mudo: !!mudo, figurinha: figurinha || null, files: Object.keys(files || {}).filter(k => files[k]) };
   fs.writeFileSync(path.join(d, 'meta.json'), JSON.stringify(meta));
   return t;
 }
@@ -72,9 +72,11 @@ export async function makeSticker(sock, t, o = {}) {
       const inicio = num(o.inicio, 0, 36000, 0); const dur = num(o.duracao, 0.5, MAX_SEC, MAX_SEC); secs = dur;
       // posicao/zoom escolhidos no site: o video (escalado) e colado num quadro 512x512 transparente
       const s = num(o.escala, 0.01, 50, 0), ox = Math.round(num(o.x, -20000, 20000, 0)), oy = Math.round(num(o.y, -20000, 20000, 0));
-      const vw = Math.round(num(o.largura, 1, 8000, 512) * s) || 0, vh = Math.round(num(o.altura, 1, 8000, 512) * s) || 0;
-      const place = s && vw && vh ? `scale=${vw + (vw % 2)}:${vh + (vh % 2)}:flags=lanczos` : 'scale=512:512:force_original_aspect_ratio=decrease:flags=lanczos';
-      const pos = s && vw && vh ? `x=${ox}:y=${oy}` : 'x=(W-w)/2:y=(H-h)/2';
+      // "esticar": escala diferente na largura e na altura (escalaX / escalaY)
+      const sx = num(o.escalaX, 0.01, 50, 0) || s, sy = num(o.escalaY, 0.01, 50, 0) || s;
+      const vw = Math.round(num(o.largura, 1, 8000, 512) * sx) || 0, vh = Math.round(num(o.altura, 1, 8000, 512) * sy) || 0;
+      const place = (s || sx) && vw && vh ? `scale=${vw + (vw % 2)}:${vh + (vh % 2)}:flags=lanczos` : 'scale=512:512:force_original_aspect_ratio=decrease:flags=lanczos';
+      const pos = (s || sx) && vw && vh ? `x=${ox}:y=${oy}` : 'x=(W-w)/2:y=(H-h)/2';
       const bg = /^#[0-9a-f]{6}$/i.test(o.fundo || '') ? '0x' + o.fundo.slice(1) : 'black@0.0'; // fundo escolhido no site
       for (const [q, fps] of [[80, 15], [65, 15], [50, 12], [35, 10]]) {
         const out = path.join(work, `f${q}.webp`);

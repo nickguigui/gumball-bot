@@ -52,7 +52,8 @@ const st = {
   kind: null,            // 'image' | 'video' | 'blank'
   img: null, video: null, srcW: 0, srcH: 0,
   videoFile: null, videoFromBase: false, uploadedVideo: null,
-  s: 1, x: 0, y: 0, rot: 0, flip: false, filt: { bri: 100, con: 100, sat: 100 }, bg: '',
+  s: 1, x: 0, y: 0, rot: 0, flip: false, formato: 'inteira', ajustando: false, sel: null, // sel = quadrado do recorte (em pixels da midia)
+   filt: { bri: 100, con: 100, sat: 100 }, bg: '',
   items: [], sel: -1, tool: 'move',
   brush: { color: '#ffffff', size: 12 }, eraser: 30,
   vStart: 0, vDur: 8,
@@ -87,11 +88,68 @@ function drawBase(c, forExport) {
   const [w, h] = baseDims();
   c.save();
   if (st.kind === 'image') c.filter = `brightness(${st.filt.bri}%) contrast(${st.filt.con}%) saturate(${st.filt.sat}%)`;
+  if (st.formato === 'esticar') { // a midia inteira esticada no quadrado
+    c.translate(S / 2, S / 2); c.rotate(st.rot * Math.PI / 180); if (st.flip) c.scale(-1, 1);
+    c.drawImage(src, -S / 2, -S / 2, S, S); c.restore(); return;
+  }
   c.translate(st.x + w * st.s / 2, st.y + h * st.s / 2);
   c.rotate(st.rot * Math.PI / 180); if (st.flip) c.scale(-1, 1);
   c.drawImage(src, -st.srcW * st.s / 2, -st.srcH * st.s / 2, st.srcW * st.s, st.srcH * st.s);
   c.restore();
 }
+// ---------- recortar: a midia inteira na tela e um quadrado para escolher o pedaco ----------
+function vistaRecorte() { const [w, h] = baseDims(); const k = Math.min(S / w, S / h); return { k, ox: (S - w * k) / 2, oy: (S - h * k) / 2, w, h }; }
+function selPadrao() { const [w, h] = baseDims(); const t = Math.min(w, h); return { x: (w - t) / 2, y: (h - t) / 2, t }; }
+function aplicarRecorte() { // o quadrado escolhido vira o enquadramento da figurinha
+  const q = st.sel || selPadrao(); st.s = S / q.t; st.x = -q.x * st.s; st.y = -q.y * st.s; syncZoom();
+}
+function desenhaRecorte() {
+  const src = st.kind === 'image' ? st.img : st.video; if (!src) return;
+  const v = vistaRecorte(), q = st.sel || (st.sel = selPadrao());
+  ctx.save(); if (st.kind === 'image') ctx.filter = `brightness(${st.filt.bri}%) contrast(${st.filt.con}%) saturate(${st.filt.sat}%)`;
+  ctx.translate(v.ox + v.w * v.k / 2, v.oy + v.h * v.k / 2); ctx.rotate(st.rot * Math.PI / 180); if (st.flip) ctx.scale(-1, 1);
+  ctx.drawImage(src, -st.srcW * v.k / 2, -st.srcH * v.k / 2, st.srcW * v.k, st.srcH * v.k); ctx.restore();
+  const X = v.ox + q.x * v.k, Y = v.oy + q.y * v.k, T = q.t * v.k;
+  ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.rect(0, 0, S, S); ctx.rect(X, Y, T, T); ctx.fill('evenodd');
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeRect(X, Y, T, T);
+  ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1; ctx.beginPath(); // linhas dos tercos
+  for (const f of [1 / 3, 2 / 3]) { ctx.moveTo(X + T * f, Y); ctx.lineTo(X + T * f, Y + T); ctx.moveTo(X, Y + T * f); ctx.lineTo(X + T, Y + T * f); }
+  ctx.stroke(); ctx.fillStyle = '#fff';
+  for (const [cx, cy] of [[X, Y], [X + T, Y], [X, Y + T], [X + T, Y + T]]) { ctx.beginPath(); ctx.arc(cx, cy, 11, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+function recortePointer(tipo, p) {
+  const v = vistaRecorte(); const q = st.sel || (st.sel = selPadrao());
+  const toSrc = (x, y) => ({ x: (x - v.ox) / v.k, y: (y - v.oy) / v.k }); const m = toSrc(p.x, p.y);
+  const clamp = () => { q.t = Math.max(Math.min(v.w, v.h) * 0.08, Math.min(q.t, v.w, v.h)); q.x = Math.max(0, Math.min(v.w - q.t, q.x)); q.y = Math.max(0, Math.min(v.h - q.t, q.y)); };
+  if (tipo === 'down') {
+    const cantos = [[q.x, q.y, q.x + q.t, q.y + q.t], [q.x + q.t, q.y, q.x, q.y + q.t], [q.x, q.y + q.t, q.x + q.t, q.y], [q.x + q.t, q.y + q.t, q.x, q.y]];
+    const perto = cantos.find(([cx, cy]) => Math.hypot((cx - m.x) * v.k, (cy - m.y) * v.k) < 30);
+    if (perto) return { canto: true, ax: perto[2], ay: perto[3] }; // arrasta o canto; o canto oposto fica parado
+    if (m.x >= q.x && m.x <= q.x + q.t && m.y >= q.y && m.y <= q.y + q.t) return { mover: true, dx: m.x - q.x, dy: m.y - q.y };
+    q.x = m.x - q.t / 2; q.y = m.y - q.t / 2; clamp(); return { mover: true, dx: q.t / 2, dy: q.t / 2 }; // toque fora: leva o quadrado ate la
+  }
+  const d = recorteDrag; if (!d) return;
+  if (d.mover) { q.x = m.x - d.dx; q.y = m.y - d.dy; clamp(); return; }
+  const t = Math.max(Math.abs(m.x - d.ax), Math.abs(m.y - d.ay));
+  q.t = t; q.x = m.x < d.ax ? d.ax - t : d.ax; q.y = m.y < d.ay ? d.ay - t : d.ay; clamp();
+}
+let recorteDrag = null;
+const DICAS_FORMATO = {
+  recortar: 'Arraste o quadrado até o pedaço que você quer; puxe um canto para aumentar ou diminuir.',
+  esticar: 'A foto ou o vídeo inteiro esticado até virar quadrado.',
+  inteira: 'Do jeito que está, com bordas transparentes. Arraste para mover e use o zoom.',
+};
+function setFormato(f) {
+  st.formato = f; st.ajustando = f === 'recortar';
+  $$('#formato button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.f === f)));
+  $('#formato-dica').textContent = DICAS_FORMATO[f]; $('#recorte-ok').hidden = f !== 'recortar';
+  $('#hint').textContent = f === 'recortar' ? DICAS_FORMATO.recortar : f === 'esticar' ? 'A figurinha usa a foto ou o vídeo inteiro, esticado.' : HINTS.move;
+  $('#ajuste-livre').hidden = f !== 'inteira';
+  if (f === 'inteira') fit('contain');
+  if (f === 'recortar') { st.sel = st.sel || selPadrao(); aplicarRecorte(); }
+}
+function fimRecorte() { if (!st.ajustando) return; aplicarRecorte(); st.ajustando = false; $('#recorte-ok').hidden = true; $('#formato-dica').textContent = 'Recorte escolhido. Toque em "Recortar" de novo para mudar.'; }
 function textLines(it) { return String(it.text || '').split('\n'); }
 function itemFont(it) { const f = FONTS.find(f => f[0] === it.font) || FONTS[0]; return `${f[1]} ${it.size}px "${f[0]}", "Nunito", sans-serif`; }
 function measure(c, it) {
@@ -112,6 +170,7 @@ function drawItems(c) {
 }
 function render() {
   ctx.clearRect(0, 0, S, S);
+  if (st.ajustando && st.tool === 'move' && st.srcW) { desenhaRecorte(); if (st.kind === 'video' && st.video && !st.video.paused && st.video.currentTime >= st.vStart + st.vDur) st.video.currentTime = st.vStart; requestAnimationFrame(render); return; }
   drawBase(ctx, false);
   ctx.drawImage(paint, 0, 0);
   drawItems(ctx);
@@ -132,17 +191,19 @@ function hitItem(p) {
 cv.addEventListener('pointerdown', e => {
   cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, toCanvas(e));
   const p = toCanvas(e);
+  if (st.ajustando && st.tool === 'move') { recorteDrag = recortePointer('down', p); return; }
   if (pts.size === 2 && st.tool === 'move') { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: st.s, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, x: st.x, y: st.y }; drag = null; return; }
   if (st.tool === 'brush' || st.tool === 'eraser') { pushHist(); last = p; stroke(p, p); return; }
   const hit = hitItem(p);
   if (hit >= 0) { st.sel = hit; showSel(); pushHist(); drag = { item: hit, dx: p.x - st.items[hit].x, dy: p.y - st.items[hit].y }; return; }
   if (st.tool === 'text') { addText(p); return; }
   if (st.sel >= 0) { st.sel = -1; showSel(); }
-  if (st.kind === 'image' || st.kind === 'video') drag = { base: true, sx: p.x - st.x, sy: p.y - st.y };
+  if ((st.kind === 'image' || st.kind === 'video') && st.formato === 'inteira') drag = { base: true, sx: p.x - st.x, sy: p.y - st.y };
 });
 cv.addEventListener('pointermove', e => {
   if (!pts.has(e.pointerId)) return;
   pts.set(e.pointerId, toCanvas(e)); const p = toCanvas(e);
+  if (st.ajustando && st.tool === 'move') { recortePointer('move', p); return; }
   if (pinch && pts.size === 2) {
     const [a, b] = [...pts.values()]; const k = Math.hypot(a.x - b.x, a.y - b.y) / pinch.d;
     zoomAround(pinch.s * k, pinch.cx, pinch.cy, pinch); return;
@@ -151,9 +212,9 @@ cv.addEventListener('pointermove', e => {
   if (drag?.base) { st.x = p.x - drag.sx; st.y = p.y - drag.sy; return; }
   if (drag) { const it = st.items[drag.item]; it.x = p.x - drag.dx; it.y = p.y - drag.dy; }
 });
-const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) { drag = null; last = null; } };
+const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) { drag = null; last = null; recorteDrag = null; } };
 cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-cv.addEventListener('wheel', e => { if (st.tool !== 'move' || !st.srcW) return; e.preventDefault(); const p = toCanvas(e); zoomAround(st.s * (e.deltaY < 0 ? 1.08 : 1 / 1.08), p.x, p.y); }, { passive: false });
+cv.addEventListener('wheel', e => { if (st.tool !== 'move' || !st.srcW || st.formato !== 'inteira') return; e.preventDefault(); const p = toCanvas(e); zoomAround(st.s * (e.deltaY < 0 ? 1.08 : 1 / 1.08), p.x, p.y); }, { passive: false });
 function zoomAround(ns, cx, cy, from = null) {
   ns = Math.min(Math.max(ns, 0.02), 40); const o = from || { s: st.s, x: st.x, y: st.y };
   st.x = cx - (cx - o.x) * ns / o.s; st.y = cy - (cy - o.y) * ns / o.s; st.s = ns; syncZoom();
@@ -168,11 +229,12 @@ function stroke(a, b) {
 // ---------- ferramentas ----------
 const HINTS = { move: 'Arraste para mover. Use dois dedos (ou a rodinha do mouse) para dar zoom.', brush: 'Desenhe com o dedo ou o mouse.', eraser: 'Passe por cima do desenho para apagar.', text: 'Toque na figurinha para colocar um texto; toque num texto para editar ou arrastar.', emoji: 'Escolha um emoji; depois arraste ele na figurinha.' };
 function setTool(t) {
+  if (t !== 'move') fimRecorte();
   st.tool = t; $$('.tool[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
   $('#stage').classList.toggle('draw', t === 'brush' || t === 'eraser');
   for (const p of ['brush', 'eraser', 'text', 'emoji']) $('#p-' + p).hidden = p !== t;
   $('#p-move').hidden = t !== 'move' || st.kind === 'blank';
-  $('#hint').textContent = HINTS[t];
+  $('#hint').textContent = t === 'move' && st.ajustando ? DICAS_FORMATO.recortar : HINTS[t];
 }
 $$('.tool[data-tool]').forEach(b => b.onclick = () => setTool(b.dataset.tool));
 function swatches(el, get, set) {
@@ -227,8 +289,8 @@ addEventListener('keydown', e => {
 // enquadrar / ajustes
 function syncZoom() { const [w, h] = baseDims(); const base = w ? Math.min(S / w, S / h) : 1; const pct = Math.round(st.s / base * 100); $('#zoom').value = Math.min(400, Math.max(10, pct)); $('#zoom-o').textContent = pct + '%'; }
 $('#zoom').oninput = e => { const [w, h] = baseDims(); if (!w) return; zoomAround(Math.min(S / w, S / h) * e.target.value / 100, S / 2, S / 2); };
-$('#fit-contain').onclick = () => fit('contain'); $('#fit-cover').onclick = () => fit('cover');
-$('#rotate').onclick = () => { st.rot = (st.rot + 90) % 360; fit('contain'); };
+
+$('#rotate').onclick = () => { st.rot = (st.rot + 90) % 360; st.sel = null; if (st.formato === 'recortar') { st.ajustando = true; setFormato('recortar'); } else fit('contain'); };
 $('#flip').onclick = () => { st.flip = !st.flip; };
 for (const [id, k] of [['#f-bri', 'bri'], ['#f-con', 'con'], ['#f-sat', 'sat']]) bindRange(id, v => { st.filt[k] = v; });
 $('#bgs').onchange = () => { const v = $('input[name=bg]:checked').value; st.bg = v === 'custom' ? $('#bg-custom').value : v; };
@@ -261,6 +323,7 @@ async function start(kind, { file, base } = {}) {
       st.vStart = 0; st.vDur = +$('#v-dur').value; $('#v-start').value = 0; $('#v-start-o').textContent = fmt(0); $('#v-dur-o').textContent = fmt(st.vDur);
       fit('contain'); st.video.play().catch(() => {});
     }
+    st.sel = null; st.formato = 'inteira'; st.ajustando = false; if (kind !== 'blank') setFormato('inteira');
     $$('.img-only').forEach(e => { e.hidden = kind !== 'image'; }); $('#snd-len').hidden = kind === 'video' || !['mp3', 'outro', 'gravar'].includes(st.som);
     $$('.vid-only').forEach(e => { e.hidden = kind !== 'video'; });
     $('#p-video').hidden = kind !== 'video';
@@ -374,8 +437,11 @@ $('#send').onclick = async () => {
         await upload('video', st.videoFile, extOf(st.videoFile.name, st.videoFile.type), p => say(`Enviando o vídeo… ${Math.round(p * 100)}%`));
         st.uploadedVideo = st.videoFile;
       }
-      Object.assign(opts, { inicio: st.vStart, duracao: st.vDur, escala: st.s, largura: st.srcW, altura: st.srcH, x: st.x, y: st.y, fundo: st.bg });
+      if (st.ajustando) fimRecorte();
+      Object.assign(opts, { inicio: st.vStart, duracao: st.vDur, escala: st.s, largura: st.srcW, altura: st.srcH, x: st.x, y: st.y, fundo: st.bg },
+        st.formato === 'esticar' ? { escalaX: S / st.srcW, escalaY: S / st.srcH, x: 0, y: 0 } : {});
     } else {
+      if (st.ajustando) fimRecorte();
       say('Preparando a imagem…');
       // com fundo transparente e "so desenho", o fundo fica vazio mesmo
       await upload('final', await exportCanvas(true), 'png');
@@ -430,6 +496,10 @@ async function showPecas() {
   $('#pc-mudo').onclick = async () => { await abrir('nenhum'); say('Sem som. Toque em "Mandar no WhatsApp" para receber a figurinha muda.'); };
 }
 
+// ---------- formato (recortar / esticar / inteira) ----------
+$('#formato').addEventListener('click', e => { const b = e.target.closest('button[data-f]'); if (b) { setTool('move'); setFormato(b.dataset.f); } });
+$('#recorte-ok').addEventListener('click', fimRecorte);
+
 // ---------- abrir ----------
 function showMsg(text, loading, error) {
   $('#ed-msg').hidden = false; $('#ed-msg').innerHTML = `<span class="ms ${loading ? 'spin' : ''}">${loading ? 'progress_activity' : error ? 'link_off' : 'info'}</span><p>${text}</p>`;
@@ -443,6 +513,13 @@ function showMsg(text, loading, error) {
     if (meta.pacote) $('#pack').value = meta.pacote; if (meta.autor) $('#author').value = meta.autor;
     if (meta.pacoteAberto) { $('#no-pacote').hidden = false; $('#no-pacote-txt').textContent = `Também colocar no pacote "${meta.pacoteAberto.nome}" (${meta.pacoteAberto.qtd}/30)`; }
     if (meta.figurinha) await showPecas(); else $('#pick-title').hidden = true;
+    if (meta.modo === 'recorte' && meta.base) {
+      requestAnimationFrame(render);
+      await start(meta.base, { base: true });
+      setTool('move'); setFormato('recortar');
+      if (meta.base === 'video' && !meta.mudo) { const r = $('input[name=som][value=video]'); r.checked = true; setSom('video'); }
+      $('#ed-msg').hidden = true; return;
+    }
     if (meta.base && !meta.figurinha) { $('#pk-base').hidden = false; $('#pk-base-sub').textContent = meta.base === 'video' ? 'Vídeo ou figurinha animada' : 'Imagem'; }
     $('#ed-msg').hidden = true; $('#ed-start').hidden = false;
     requestAnimationFrame(render);

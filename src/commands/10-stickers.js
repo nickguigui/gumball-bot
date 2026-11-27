@@ -1,6 +1,8 @@
 // Figurinhas e edicao de fotos (sharp + ffmpeg, tudo local).
 import sharp from 'sharp';
 import { fileURLToPath } from 'node:url';
+import { mediaDims, quadrado } from '../lib/media.js';
+import { createToken, EDITOR_URL } from '../lib/editor.js';
 import { imageToSticker, videoToSticker, addExif, readExif, stickerToImage, stickerToMp4, textSvg, svgToWebp, svgToPng, framesToAnimatedWebp, esc, wrap, toOggOpus, isAnimatedWebp, muxAudio } from '../lib/media.js';
 import { attachSound, stickerSound } from '../lib/soundsticker.js';
 import { getBuffer, getJson, http, UserError } from '../lib/http.js';
@@ -67,16 +69,27 @@ export const commands = [
       if (!m) return ctx.reply('🖼️ *Como usar:* envie uma foto/vídeo/GIF com */fig* na legenda, ou responda a mídia com */fig*.');
       const { pack, author } = packOf(ctx);
       const mudo = /\bmudo\b/i.test(ctx.q);
+      // formato quando a midia nao e quadrada: recortar (centro), esticar ou inteira (bordas transparentes)
+      const FIT = /\b(recort\w*|cortar|corta|centro)\b/i.test(ctx.q) ? 'cover' : /\b(estic\w*)\b/i.test(ctx.q) ? 'fill' : /\b(inteir\w*|original|normal)\b/i.test(ctx.q) ? 'contain' : null;
+      const ehVideo = m.type === 'videoMessage' || m.mimetype.includes('gif');
+      if (!FIT && m.type !== 'stickerMessage' && process.env.MANAGED) {
+        const d = await mediaDims(m.buffer, ehVideo ? 'video' : 'image');
+        if (!quadrado(d)) {
+          // nao e quadrada: manda o link para a pessoa escolher o recorte vendo a foto/video
+          const t = createToken({ jid: ctx.jid, chatName: ctx.isGroup ? (await ctx.meta().catch(() => null))?.subject : 'conversa privada', base: { buffer: m.buffer, ext: ehVideo ? 'mp4' : 'jpg', kind: ehVideo ? 'video' : 'image' }, pack, author, modo: 'recorte', mudo });
+          return ctx.reply(`✂️ *Essa ${ehVideo ? 'mídia' : 'foto'} não é quadrada* (${d.w}×${d.h}). Como você quer a figurinha?\n\n👉 Escolha vendo ${ehVideo ? 'o vídeo' : 'a foto'}: ${EDITOR_URL}#${t}\n_(recortar o pedaço que quiser, esticar ou inteira)_\n\n⚡ Ou responda com:\n• */s recortar* (o centro)\n• */s esticar* (estica até ficar quadrada)\n• */s inteira* (do jeito que está, com bordas transparentes)`);
+        }
+      }
       let webp, sound = null, secs = 0;
-      if (m.type === 'videoMessage' || m.mimetype.includes('gif')) {
+      if (ehVideo) {
         if ((m.seconds || 0) > 30) return ctx.reply('⏱️ O vídeo precisa ter até *30 segundos*.');
-        webp = await videoToSticker(m.buffer, 'mp4', { pack, author });
+        webp = await videoToSticker(m.buffer, 'mp4', { pack, author, fit: FIT || 'contain' });
         secs = Math.min(8, m.seconds || 8); // o som acompanha a animacao
         if (!mudo && !m.raw?.gifPlayback) sound = await toOggOpus(m.buffer, 'mp4', secs);
       } else if (m.type === 'stickerMessage') {
         webp = await addExif(m.buffer, pack, author);
         if (!mudo) { const s = await stickerSound(m.raw).catch(() => null); if (s) { sound = s.buffer; secs = s.seconds; } }
-      } else webp = await imageToSticker(m.buffer, { pack, author });
+      } else webp = await imageToSticker(m.buffer, { pack, author, fit: FIT || 'contain' });
       // foto mandada respondendo um audio: o audio vira o som da figurinha
       if (!mudo && !sound && m.type === 'imageMessage' && ctx.quoted?.type === 'audioMessage') {
         const a = await ctx.media(['audioMessage']).catch(() => null);

@@ -88,12 +88,18 @@ export async function imageToSticker(buffer, { pack, author, fit = 'contain', ro
   return addExif(webp, pack, author);
 }
 // Video/GIF -> figurinha animada (ate 8s, 512px, 15fps)
-export async function videoToSticker(buffer, ext = 'mp4', { pack, author } = {}) {
+// fit: contain = inteira (bordas transparentes), cover = recorta o centro, fill = estica ate o quadrado
+const VF = {
+  contain: 'scale=512:512:force_original_aspect_ratio=decrease:flags=lanczos,pad=512:512:-1:-1:color=0x00000000',
+  cover: 'scale=512:512:force_original_aspect_ratio=increase:flags=lanczos,crop=512:512',
+  fill: 'scale=512:512:flags=lanczos',
+};
+export async function videoToSticker(buffer, ext = 'mp4', { pack, author, fit = 'contain' } = {}) {
   // qualidade alta primeiro; so abaixa se passar do limite de figurinha animada do WhatsApp (500 KB)
   let webp;
   for (const [q, fps] of [[80, 15], [65, 15], [50, 12], [35, 10]]) {
     webp = await ffmpeg(buffer, ext, ['-t', '8', '-vf',
-      `fps=${fps},scale=512:512:force_original_aspect_ratio=decrease:flags=lanczos,pad=512:512:-1:-1:color=0x00000000,format=rgba`,
+      `fps=${fps},${VF[fit] || VF.contain},format=rgba`,
       '-loop', '0', '-an', '-vcodec', 'libwebp', '-lossless', '0', '-q:v', String(q), '-compression_level', '6', '-preset', 'picture'], 'webp');
     if (webp.length <= 490_000) break;
   }
@@ -160,3 +166,21 @@ export async function framesToAnimatedWebp(svgs, delay = 120) {
   const pngs = await Promise.all(svgs.map(s => sharp(s).png().toBuffer()));
   return sharp(pngs, { join: { animated: true } }).webp({ quality: 80, loop: 0, delay: pngs.map(() => delay) }).toBuffer();
 }
+
+// Largura e altura de uma foto ou video (ja girados como aparecem na tela)
+export async function mediaDims(buffer, kind) {
+  if (kind === 'image') {
+    const m = await sharp(buffer).metadata().catch(() => ({}));
+    return (m.orientation || 1) >= 5 ? { w: m.height, h: m.width } : { w: m.width, h: m.height };
+  }
+  const dir = await tmpdir();
+  try {
+    const f = path.join(dir, 'v.mp4'); await writeFile(f, buffer);
+    const { stderr } = await run(config.ffmpeg, ['-hide_banner', '-i', f], { timeout: 30000 }).catch(e => e);
+    const m = /Video:.*?(\d{2,5})x(\d{2,5})/.exec(stderr || ''); if (!m) return {};
+    const rot = /rotat(?:e|ion of)\s*:?\s*(-?\d+)/i.exec(stderr || '');
+    const virado = rot && Math.abs(parseInt(rot[1])) % 180 === 90;
+    return virado ? { w: +m[2], h: +m[1] } : { w: +m[1], h: +m[2] };
+  } finally { await rm(dir, { recursive: true, force: true }); }
+}
+export const quadrado = d => !d?.w || !d?.h || Math.abs(d.w / d.h - 1) <= 0.05;
