@@ -44,3 +44,33 @@ GitHub Actions (`servidor.yml`) roda ~5h40, salva os dados criptografados a cada
 - Erros de serviço externo viram aviso amigável ("o serviço está ocupado, tente de novo").
 - **Testado ao vivo no seu número**: /filme, /cinema, /gpt, /placaloli, /futebol brasileirao, /noticias Laufey, /emojimix, /wiki. Bateria automática: 316 comandos, 0 crash.
 - **Backup**: `E:\backups\gumball-bot_2026-11-26_1249.zip` (cópia em `D:\backups`), com o projeto, a engenharia reversa, a memória e as chaves de acesso locais.
+
+---
+
+# Atualização (26/11, noite) — "o bot não funcionava com o PC desligado"
+
+## Causa
+Não era o PC. Quando o servidor trocava de turno (ou era reiniciado), ele voltava com os dados salvos **até 5 minutos antes**. A criptografia entre o seu celular e o bot muda a cada mensagem, então os dados velhos ficavam dessincronizados (`Bad MAC`) e o bot **não conseguia ler o que você mandava do celular** (principalmente no privado). Além disso, um turno cancelado disparava um turno extra.
+
+## Corrigido
+- Sessão salva **a cada 1 minuto** num ramo separado (`estado`, um commit só, o histórico não incha) e **também quando o turno é cancelado ou cai**. Testado em 6 trocas seguidas: zero erro de criptografia.
+- Turno cancelado não dispara mais um turno extra e avisa o site que está trocando.
+- Comando mandado durante a troca de turno (1–2 min fora) é respondido quando o bot volta.
+- Diagnóstico: o servidor registra o tipo de cada mensagem recebida (sem conteúdo) e os erros, e o registro sobrevive às trocas.
+
+## Outros bugs achados testando ao vivo (grupo, privado e site)
+- Rankings do grupo (/rank, /ativos, /inativos, /casais...) diziam "Sem dados" porque comparavam número com o ID novo do WhatsApp (LID). Agora aceitam os dois.
+- /wiki levava bloqueio da Wikipédia; /cotacao (/dolarhoje) caía quando a API de câmbio falhava: agora tem reserva.
+- /lembrete agora entende "daqui 1 minuto", "em 5 min", "dentro de 2h".
+- /forca <letra> durante o jogo da forca vale como palpite.
+- Menu te chamava de "Usuário" nas suas próprias mensagens; e quem conectasse pelo site veria "Dono: Nick" (agora é o nome do perfil de cada um).
+- Novos apelidos: /saldo, /carteira, /cotacao, /dolar. Comando digitado errado: "Quis dizer /minerar?" (só para você).
+- Conteúdo bem maior (50 piadas, 46 perguntas de quiz, 60 bandeiras, 51 palavras de forca...) e sem repetir até passar por todas.
+- Canal: /canaldata cadastra datas especiais pelo WhatsApp; prévia do site sem frases cortadas.
+- Site: botões das categorias com a fonte certa; painel espera o servidor reiniciar em vez de cair na tela de entrar; links diretos (#canal) funcionam; grupos em ordem alfabética; "sem admin" não aparece mais como erro vermelho.
+
+## Testado ao vivo e funcionando
+Grupo: menu, ping, medidores, piada, quiz, forca, bandeira, charada, daily, minerar, perfil, banco, rank, ativos, clima, traduzir, calcular, feriados, signo, conselho, fato, gpt, lyrics, filme, notícias, futebol, celular, ff, cep, ddd, qr, encurtar, ytsearch, falar, figurinha de vídeo e de foto (/s), TikTok, regras, enquete, lembrete, totag, painel, config. Privado: menu, cotação, piada, comandos de grupo explicam que só funcionam em grupo. Site: login com código, lista de grupos, salvar opção do grupo (refletiu no /painel do WhatsApp), canal automático, celular e computador.
+
+## Pendente (depende de você)
+- **/play e downloads do YouTube**: o YouTube bloqueia todos os servidores do GitHub ("confirme que não é um robô"). TikTok e outros funcionam. Para o YouTube voltar, é preciso cookies de uma conta do YouTube (de preferência uma conta secundária) guardados como Secret `YTDLP_COOKIES` — o bot já está pronto para usar.
