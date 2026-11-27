@@ -111,3 +111,22 @@ Responda qualquer figurinha (de quem for, feita no site ou não) com **/abrirfig
 - **Android**: APK "Gumball Figurinhas" (baixe na aba Figurinhas, botão "Baixar o app Android"). Abre a galeria e o botão **Adicionar ao WhatsApp** coloca o pacote direto no WhatsApp, como o sticker.ly. Assinado com uma chave só sua (`app/gumball-release.jks`, senha em `secrets.txt`, os dois fora do GitHub): **não perca esse arquivo**, sem ele as próximas versões não instalam por cima.
 - **iPhone**: o site instala como app (Compartilhar → Adicionar à Tela de Início). App na App Store precisa de Mac e da conta paga da Apple.
 - ⚠️ Pelo app, o **som** das figurinhas não entra no pacote (o WhatsApp não aceita pacote de app com som). Com som: "Mandar no meu WhatsApp" / `/baixarpacote`.
+
+---
+
+# Robô de promoções com link de afiliado (27/11, noite)
+
+Posta ofertas com o **seu** link de afiliado em grupos e canais. Nada de senha: cada loja dá um código no painel de afiliado e você cola no Gumball.
+
+| Loja | O que o bot faz | O que você precisa |
+|---|---|---|
+| Amazon | Converte qualquer link (inclusive amzn.to) | Código de Associado (`seucodigo-20`) |
+| Mercado Livre | Converte qualquer link do ML | Um link de afiliado gerado no painel do ML (eu copio o código dele) |
+| Shopee | Converte links **e busca ofertas sozinho** | AppID + Secret da Open API (pedir acesso no painel) |
+| AliExpress | Converte links **e busca ofertas sozinho** | App Key + Secret + Tracking ID |
+
+- **Site**: painel › Robô de promoções: ligar/desligar, grupos e canais, frequência, horário, buscas (ex.: fone, air fryer), desconto mínimo, emoji, assinatura, as 4 lojas com passo a passo, "Postar uma oferta" (com foto) e "Só converter o link". As chaves secretas nunca voltam para o site.
+- **WhatsApp**: `/comoafiliar` (passo a passo), `/afiliados`, `/afiliado <link>`, `/promo <link> 129,90 de 199,90 cupom X | Título` (mande como legenda de uma foto para a foto ir junto; `/promo agora ...` posta na hora), `/promocoes` (ligar, aqui, canal, intervalo, horario, busca, desconto, fila, testar...).
+- Ofertas automáticas: Shopee e AliExpress pelas APIs oficiais, sem repetir produto, as de maior desconto primeiro. Amazon e ML entram pelos links que você colar (a Amazon só libera a API de produtos depois das 3 primeiras vendas, e o ML não tem API de afiliado).
+- Testado ao vivo no grupo "Eu ;-;": converter link da Amazon, postar oferta com preço/desconto/cupom, postar pelo site com foto. As APIs da Shopee e do AliExpress foram chamadas de verdade e respondem; só falta a sua chave aprovada.
+- Banco de dados do Google: não foi preciso, as configurações ficam no servidor do Gumball, criptografadas.
