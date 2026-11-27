@@ -2,7 +2,18 @@
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const api = (...a) => window.gumballApi(...a);
-let canais = [], atual = null;
+let canais = [], atual = null, grupos = [], marcados = new Set(), todos = false;
+// lista de grupos: escolhidos primeiro, busca, e so 6 ate tocar em "Ver todos" (tem gente com 100+ grupos)
+function renderGrupos() {
+  const q = ($('#pr-busca').value || '').toLowerCase();
+  const lista = grupos.filter(x => !q || x.nome.toLowerCase().includes(q)).sort((a, b) => marcados.has(b.jid) - marcados.has(a.jid));
+  const mostrar = q || todos ? lista : lista.slice(0, Math.max(6, [...marcados].length));
+  $('#pr-grupos').innerHTML = mostrar.length ? mostrar.map(x => `<li><div><b>👥 ${esc(x.nome)}</b><p>${x.membros} ${x.membros === 1 ? 'pessoa' : 'pessoas'}</p></div><input type="checkbox" class="switch" data-jid="${esc(x.jid)}" data-nome="${esc(x.nome)}" ${marcados.has(x.jid) ? 'checked' : ''} aria-label="Postar em ${esc(x.nome)}"></li>`).join('') : `<li class="muted">${grupos.length ? 'Nenhum grupo com esse nome.' : 'Seu número ainda não está em nenhum grupo.'}</li>`;
+  const sobra = lista.length - mostrar.length; $('#pr-todos').hidden = sobra <= 0; $('#pr-todos').textContent = `Ver todos os grupos (${lista.length})`;
+}
+$('#pr-grupos').addEventListener('change', e => { const i = e.target.closest('input[data-jid]'); if (i) i.checked ? marcados.add(i.dataset.jid) : marcados.delete(i.dataset.jid); });
+$('#pr-busca').addEventListener('input', renderGrupos);
+$('#pr-todos').addEventListener('click', () => { todos = true; renderGrupos(); });
 
 function status(r) {
   const l = r.lojas;
@@ -34,9 +45,9 @@ async function abrir() {
     f.ativo.checked = r.ativo; f.intervalo.value = String(r.intervalo); if (!f.intervalo.value) f.intervalo.value = '30';
     f.de.value = r.de; f.ate.value = r.ate; f.buscas.value = (r.buscas || []).join(', '); f.descontoMin.value = r.descontoMin; f.emoji.value = r.emoji || '🔥'; f.assinatura.value = r.assinatura || '';
     f.amazon.value = r.lojas.amazon || ''; f.mercadolivre.value = ''; for (const n of ['shopeeAppId', 'shopeeSecret', 'aliAppKey', 'aliSecret', 'aliTracking']) f[n].value = '';
-    const marcados = new Set(r.destinos.filter(d => d.tipo === 'grupo').map(d => d.jid));
-    const grupos = (g.grupos || []).filter(x => x.nome);
-    $('#pr-grupos').innerHTML = grupos.length ? grupos.map(x => `<li><div><b>👥 ${esc(x.nome)}</b><p>${x.membros} ${x.membros === 1 ? 'pessoa' : 'pessoas'}</p></div><input type="checkbox" class="switch" data-jid="${esc(x.jid)}" data-nome="${esc(x.nome)}" ${marcados.has(x.jid) ? 'checked' : ''} aria-label="Postar em ${esc(x.nome)}"></li>`).join('') : '<li class="muted">Seu número ainda não está em nenhum grupo.</li>';
+    marcados = new Set(r.destinos.filter(d => d.tipo === 'grupo').map(d => d.jid)); todos = false; $('#pr-busca').value = '';
+    grupos = (g.grupos || []).filter(x => x.nome);
+    renderGrupos();
     canais = r.destinos.filter(d => d.tipo === 'canal'); renderCanais(); status(r); say('#pr-salvo', '');
   } catch (e) { $('#pr-grupos').innerHTML = `<li class="muted">${esc(e.message)}</li>`; }
 }
@@ -45,7 +56,7 @@ $('#pr-voltar').addEventListener('click', () => { window.gumballView('painel'); 
 
 $('#pr-form').addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target; const btn = f.querySelector('[type=submit]'); btn.disabled = true; say('#pr-salvo', 'Salvando…');
-  const destinos = [...document.querySelectorAll('#pr-grupos input[data-jid]:checked')].map(i => ({ tipo: 'grupo', jid: i.dataset.jid, nome: i.dataset.nome })).concat(canais);
+  const destinos = grupos.filter(x => marcados.has(x.jid)).map(x => ({ tipo: 'grupo', jid: x.jid, nome: x.nome })).concat(canais);
   const afiliados = { amazon: f.amazon.value.trim() };
   if (f.mercadolivre.value.trim()) afiliados.mercadolivre = f.mercadolivre.value.trim();
   if (f.shopeeAppId.value.trim() || f.shopeeSecret.value.trim()) afiliados.shopee = { appId: f.shopeeAppId.value.trim(), secret: f.shopeeSecret.value.trim() };
