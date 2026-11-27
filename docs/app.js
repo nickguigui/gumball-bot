@@ -152,7 +152,18 @@ async function openPanel() {
     $('#pn-privado').checked = !!p.config.privateChats;
     $('#pn-canais').innerHTML = p.canais.length ? p.canais.map(c => `<li><div><b>${esc(c.emoji || '📰')} ${esc(c.name || c.topic)}</b><p>${esc(c.topic)}${c.invite ? '' : '. Falta o link do canal.'}</p></div><button class="btn text" data-del="${esc(c.id)}">Remover</button></li>`).join('') : '<li><div><p>Nenhum canal ainda. Crie um sobre o assunto que quiser.</p></div></li>';
     loadGroups();
-  } catch { view('cx-numero'); }
+  } catch (err) {
+    // servidor trocando de turno/reiniciando: a sessao continua valida, entao espera e tenta de novo
+    // (so volta para a tela de entrar se o servidor recusar a sessao, que o api() limpa no 401)
+    if (session) {
+      view('painel');
+      $('#pn-estado').textContent = 'Servidor reiniciando… tentando de novo'; $('#pn-estado').className = 'estado';
+      $('#pn-grupos').innerHTML = `<li class="muted" style="padding:12px 6px">${esc(err.message || 'Sem conexão com o servidor.')} Tentando de novo sozinho em 10 segundos…</li>`;
+      clearTimeout(openPanel.t); openPanel.t = setTimeout(openPanel, 10000);
+      return;
+    }
+    view('cx-numero');
+  }
 }
 async function loadGroups() {
   $('#pn-grupos').innerHTML = '<li class="muted" style="padding:12px 6px">Carregando seus grupos...</li>';

@@ -137,3 +137,7 @@ jobs:
           git config user.name "gumball-servidor"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           b=$(git hash-object -w "$STATE_FILE"); t=$(printf '100644 blob %s\tservidor.enc\n' "$b" | git mktree)
           c=$(git commit-tree "$t" -m "servidor: dados (cancelado)") && git push -fq origin "$c:refs/heads/estado" && echo "💾 salvo"
+          # avisa o site que o servidor esta trocando (senao ele tenta o endereco antigo, ja morto)
+          printf '{"url":"","desde":%s,"trocando":true}\n' "$(date +%s000)" > endpoint.json
+          git add endpoint.json && git commit -qm "servidor: trocando de turno" && for i in 1 2 3; do git pull -q --rebase -X theirs && git push -q && break; sleep 2; done
+          true
