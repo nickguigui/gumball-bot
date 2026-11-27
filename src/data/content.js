@@ -136,3 +136,13 @@ export const previsoes = [
   'A criatividade está em alta. Ótimo dia para começar um projeto novo.', 'Amizades se fortalecem. Chame alguém para uma conversa boa.',
 ];
 export const amuletos = ['Água-Marinha', 'Quartzo Rosa', 'Ametista', 'Olho de Tigre', 'Citrino', 'Turmalina Negra', 'Jade', 'Pedra da Lua', 'Ônix', 'Lápis-Lazúli'];
+
+// Conteudo extra (mais variedade), sem duplicar o que ja existe
+import * as EXTRA from './content-extra.js';
+for (const [k, list] of Object.entries(EXTRA)) {
+  const target = { piadas, quiz, charadas, anagramas, bandeiras, forcaPalavras, verdades, desafios, eununca, cantadas, fatos, conselhos, frases }[k];
+  if (!target) continue;
+  const key = x => String(Array.isArray(x) ? x[0] : x).toLowerCase();
+  const seen = new Set(target.map(key));
+  for (const x of list) if (!seen.has(key(x))) { target.push(x); seen.add(key(x)); }
+}

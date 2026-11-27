@@ -49,7 +49,7 @@ function start(phone, { pairing = false } = {}) {
   const env = {
     ...process.env, MANAGED: '1',
     AUTH_DIR: path.join(d, 'auth'), DATA_DIR: path.join(d, 'data'), SETTINGS_FILE: settingsFile, CHANNELS_FILE: path.join(d, 'channels.json'),
-    OWNER_NUMBERS: phone, OWNER_ONLY: 'true', ALLOW_SELF: 'true', DEFAULT_BOT_ON: 'true',
+    OWNER_NUMBERS: phone, OWNER_NAME: '', OWNER_ONLY: 'true', ALLOW_SELF: 'true', DEFAULT_BOT_ON: 'true',
     PAIR_NUMBER: pairing ? phone : '', PORT: '', CI: '',
   };
   const child = fork(BOT, [], { env, cwd: path.dirname(path.dirname(BOT)), execArgv: ['--no-warnings=ExperimentalWarning'], stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });

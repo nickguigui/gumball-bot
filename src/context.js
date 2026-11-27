@@ -48,7 +48,8 @@ export function buildContext(sock, m) {
 
   const ctx = {
     sock, m, jid, isGroup, sender, senderAlt, type, message, body,
-    pushName: m.pushName || '',
+    // mensagens que voce mesmo manda nao trazem o nome: usa o nome do seu perfil
+    pushName: m.pushName || (m.key.fromMe ? (sock.user?.name || sock.user?.verifiedName || config.ownerName || '') : ''),
     mentions: ctxInfo.mentionedJid || [],
     quoted: quotedMsg ? { message: quotedMsg, raw: ctxInfo.quotedMessage, sender: ctxInfo.participant, id: ctxInfo.stanzaId, type: getContentType(quotedMsg), text: textOf(quotedMsg) } : null,
     cmd: '', args: [], q: '',

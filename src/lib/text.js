@@ -28,7 +28,19 @@ export const lightBar = (pct, size = 10) => {
   return '`[' + '█'.repeat(filled) + '░'.repeat(size - filled) + ']`';
 };
 export const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
-export const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+// Sorteio "saco embaralhado": em listas fixas nao repete ate passar por todas (piadas, quiz, fatos...)
+const bags = new WeakMap();
+export const pick = arr => {
+  if (!Array.isArray(arr) || arr.length < 3) return arr[Math.floor(Math.random() * arr.length)];
+  let bag = bags.get(arr);
+  if (!bag || !bag.length) {
+    const last = bag?.last;
+    bag = arr.map((_, i) => i).sort(() => Math.random() - 0.5);
+    if (bag.length > 1 && bag.at(-1) === last) bag.unshift(bag.pop()); // nao repete na virada do saco
+    bags.set(arr, bag);
+  }
+  const i = bag.pop(); bag.last = i; return arr[i];
+};
 export function duration(ms) {
   let s = Math.floor(ms / 1000);
   const d = Math.floor(s / 86400); s %= 86400;

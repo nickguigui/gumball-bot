@@ -63,6 +63,8 @@ async function connect() {
     }
     if (connection === 'open') {
       retry = 0;
+      // cada numero conectado e dono do proprio bot: o nome do dono e o do perfil dele
+      if (MANAGED && !process.env.OWNER_NAME) config.ownerName = sock.user?.name || sock.user?.verifiedName || 'Dono';
       if (!MANAGED) console.log(`✅ Conectado como ${sock.user?.name || 'bot'}`);
       tell({ type: 'connected', name: sock.user?.name || '' });
       if (config.pairNumber) publishPair({ status: 'conectado', at: Date.now() });
