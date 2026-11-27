@@ -18,6 +18,7 @@
   <a class="brand" href="#inicio" data-tab="inicio"><span class="ms">forum</span>Gumball Bot</a>
   <nav>
     <a href="#inicio" data-tab="inicio"><span class="ms">home</span>Início</a>
+    <a href="#figurinhas" data-tab="figurinhas"><span class="ms">sticky_note_2</span>Figurinhas</a>
     <a href="#comandos" data-tab="comandos"><span class="ms">terminal</span>Comandos</a>
     <a href="#canal" data-tab="canal"><span class="ms">campaign</span>Canal automático</a>
     <a href="#conectar" data-tab="conectar"><span class="ms">link</span>Conectar / Painel</a>
@@ -64,6 +65,39 @@
     <details><summary>Preciso deixar o computador ou o celular ligado?</summary><p>Não. Depois de conectar, ele roda na nuvem. Só abra o WhatsApp desse número pelo menos a cada 14 dias, senão o WhatsApp desconecta os aparelhos vinculados.</p></details>
     <details><summary>Outras pessoas conseguem usar o bot no meu número?</summary><p>Não. Só você: o bot obedece apenas às mensagens do seu número, em grupos e no privado. Comando de qualquer outra pessoa é ignorado.</p></details>
     <details><summary>Tem risco de ban?</summary><p>O WhatsApp não tem API oficial para bots de grupo, então ele funciona como um WhatsApp Web. O bot espaça os envios para parecer humano, mas o risco existe. Para risco zero, use um chip secundário.</p></details>
+  </div>
+</section>
+
+<section id="tab-figurinhas" class="tab" hidden>
+  <div id="gal-lista">
+    <h2 class="section-title" style="margin-top:16px">Figurinhas</h2>
+    <p class="section-sub">Pacotes feitos por quem usa o Gumball. Baixe, mande pro seu WhatsApp ou adicione pelo app. Para publicar o seu, mande <code>/novopacote Nome</code> no WhatsApp.</p>
+    <div class="gal-bar">
+      <label class="search"><span class="ms">search</span><input id="gal-busca" placeholder="Procurar pacote"></label>
+      <div class="seg" id="gal-filtro">
+        <label><input type="radio" name="gf" value="" checked>Todos</label>
+        <label><input type="radio" name="gf" value="som">🔊 Com som</label>
+        <label><input type="radio" name="gf" value="anim">🎞️ Animados</label>
+        <label><input type="radio" name="gf" value="parado">🖼️ Parados</label>
+      </div>
+    </div>
+    <div id="gal-grid" class="gal-grid"><p class="muted">Carregando pacotes…</p></div>
+  </div>
+  <div id="gal-pacote" hidden>
+    <button class="btn text" id="gal-voltar"><span class="ms">arrow_back</span>Todos os pacotes</button>
+    <div class="gal-head">
+      <img id="gp-tray" alt="">
+      <div><h2 id="gp-nome"></h2><p class="muted" id="gp-sub"></p></div>
+    </div>
+    <div class="gal-acoes">
+      <a class="btn filled" id="gp-app" href="#"><span class="ms">add_to_home_screen</span>Adicionar ao WhatsApp</a>
+      <button class="btn tonal" id="gp-zap"><span class="ms">send_to_mobile</span>Mandar no meu WhatsApp</button>
+      <button class="btn tonal" id="gp-zip"><span class="ms">download</span>Baixar tudo (.zip)</button>
+      <button class="btn text" id="gp-share"><span class="ms">share</span>Compartilhar</button>
+    </div>
+    <p class="gal-dica" id="gp-dica" hidden></p>
+    <div id="gp-figs" class="gp-figs"></div>
+    <button class="btn text danger-link" id="gp-denunciar"><span class="ms">flag</span>Denunciar este pacote</button>
   </div>
 </section>
 
@@ -264,5 +298,6 @@
   <p class="small">Projeto independente, sem ligação com o WhatsApp ou a Meta.</p>
 </footer>
 <script src="app.js" type="module"></script>
+<script src="galeria.js" type="module"></script>
 </body>
 </html>

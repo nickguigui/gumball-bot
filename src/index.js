@@ -172,6 +172,8 @@ if (MANAGED) {
         const data = await makeSticker(current, msg.token, msg.opts).catch(e => ({ erro: e.message || 'Não consegui montar a figurinha.' }));
         tell({ type: 'reply', id: msg.id, data });
       }
+      // aviso do servidor para o dono da plataforma (ex.: denuncia na galeria), na conversa "Voce"
+      if (msg.type === 'avisar-dono') await current.sendMessage(jidNormalizedUser(current.user.id), { text: msg.text });
       if (msg.type === 'logout') { await current?.logout().catch(() => {}); process.exit(4); }
       if (msg.type === 'stop') process.exit(0);
     } catch (e) { tell({ type: 'error', id: msg.id, error: e.message }); }

@@ -63,6 +63,7 @@ jobs:
           TENOR_API_KEY: ${{ secrets.TENOR_API_KEY }}
           REMOVEBG_API_KEY: ${{ secrets.REMOVEBG_API_KEY }}
           YTDLP_COOKIES: ${{ secrets.YTDLP_COOKIES }}
+          DONO_PLATAFORMA: ${{ secrets.DONO_PLATAFORMA }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set +e  # erros tratados um a um (um kill de processo ja morto nao pode derrubar o servidor)

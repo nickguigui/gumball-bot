@@ -27,11 +27,17 @@ function show(tab, animate = true) {
   moveIndicator(animate);
   window.scrollTo({ top: 0 });
 }
-document.addEventListener('click', e => { const a = e.target.closest('[data-tab]'); if (a) { e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.tab); show(a.dataset.tab); } });
-const TABS = ['inicio', 'comandos', 'canal', 'conectar'];
-show(TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'inicio', false);
+document.addEventListener('click', e => { const a = e.target.closest('[data-tab]'); if (a) { e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.tab); route(true); } });
+const TABS = ['inicio', 'figurinhas', 'comandos', 'canal', 'conectar'];
+// #figurinhas/abc123 abre direto um pacote da galeria
+function route(animate) {
+  const [t, sub] = location.hash.slice(1).split('/');
+  show(TABS.includes(t) ? t : 'inicio', animate);
+  if (t === 'figurinhas') window.galeriaRota?.(sub || '');
+}
+route(false);
 // link direto (#canal) e botao voltar do navegador tambem trocam de aba
-addEventListener('hashchange', () => { const t = location.hash.slice(1); if (TABS.includes(t)) show(t); });
+addEventListener('hashchange', () => route(true));
 addEventListener('scroll', () => $('#top').classList.toggle('scrolled', scrollY > 4), { passive: true });
 
 // ---------- playground: cada categoria mostra uma conversa de verdade ----------
@@ -110,6 +116,7 @@ async function api(path, opts = {}) {
   if (!r.ok) throw new Error(j.erro || `Erro ${r.status}`);
   return j;
 }
+window.gumballApi = (...a) => api(...a); // usado pela galeria (denuncias)
 const view = id => ['cx-numero', 'cx-parear', 'cx-entrar', 'painel', 'pn-grupo'].forEach(v => { $('#' + v).hidden = v !== id; });
 const showErr = (el, msg) => { $(el).textContent = msg; $(el).hidden = !msg; };
 let ticket = '', pollTimer = null;

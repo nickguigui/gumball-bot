@@ -9,6 +9,7 @@ import { db } from './db.js';
 import { middlewares, onJoin, onLeave, onProtocol } from './middlewares.js';
 import { numId } from './lib/text.js';
 import { settings } from './settings.js';
+import { stickerToDraft } from './commands/16-galeria.js';
 
 const lastCmdAt = new Map(); // anti-spam por usuario (tempocmd)
 
@@ -37,6 +38,8 @@ export async function handleMessage(sock, m) {
   const ctx = buildContext(sock, m);
   // Privado: so no modo "so dono" e com a opcao "Responder no privado" ligada no painel do site
   if (!ctx.isGroup && !(config.ownerOnly && settings.privateChats)) return;
+  // pacote da galeria aberto (/novopacote): figurinhas que o dono manda nesse chat entram nele
+  if (ctx.type === 'stickerMessage' && await stickerToDraft(ctx).catch(() => false)) return;
 
   // Estatisticas e middlewares (antis, afk, mute, autosticker, respostas automaticas)
   if (ctx.isGroup) {

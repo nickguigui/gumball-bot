@@ -8,6 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { galeria } from './galeria.js';
 
 const ROOT = path.resolve(process.env.DATA_ROOT || './data/tenants');
 const PORT = Number(process.env.PORT || 8787);
@@ -20,6 +21,7 @@ fs.mkdirSync(ROOT, { recursive: true });
 const REG = path.join(ROOT, '..', 'registry.json');
 const reg = fs.existsSync(REG) ? JSON.parse(fs.readFileSync(REG, 'utf8')) : { tenants: {}, sessions: {} };
 const saveReg = () => fs.writeFileSync(REG, JSON.stringify(reg, null, 1));
+const G = galeria(reg, saveReg);
 const procs = new Map();   // phone -> { child, state, code, codeAt, waiters:[] }
 const logins = new Map();  // phone -> { code, until, tries }
 const tickets = new Map(); // ticket -> { phone, until }
@@ -78,6 +80,13 @@ function start(phone, { pairing = false } = {}) {
     }
     if (msg.type === 'reconnecting' && p.state === 'connected') p.state = 'reconnecting';
     if (msg.type === 'logged-out') p.state = 'logged-out';
+    // pedidos do bot para o servidor (galeria): responde com manager-reply
+    if (msg.type === 'manager') {
+      const ops = { 'galeria-publicar': () => G.publicar(phone, msg.dir), 'galeria-ler': () => G.ler(String(msg.idPacote || '')), 'galeria-meus': async () => G.meus(phone), 'galeria-apagar': () => G.apagar(phone, String(msg.idPacote || '')), 'galeria-reexibir': () => G.reexibir(phone, String(msg.idPacote || '')) };
+      const fn = ops[msg.op];
+      Promise.resolve(fn ? fn() : Promise.reject(new Error('Pedido desconhecido.')))
+        .then(data => p.child.send({ type: 'manager-reply', id: msg.id, data }), e => p.child.send({ type: 'manager-reply', id: msg.id, erro: e.message || 'Deu erro no servidor.' }));
+    }
     for (const w of p.waiters.splice(0)) w(msg);
   });
   child.on('exit', code => {
@@ -280,6 +289,15 @@ const routes = {
     const r = await ask(p, { type: 'fig-make', token: url.searchParams.get('t'), opts: await body(req) }, 170_000);
     if (!r) return [504, { erro: 'Demorou demais para montar. Tente um trecho menor.' }];
     return r.erro ? [400, r] : [200, r];
+  },
+  // Galeria: denuncia de um pacote (3 pessoas diferentes escondem ate o dono da plataforma olhar)
+  'POST /api/galeria/denunciar': async (req) => {
+    if (limited('den:' + ip(req), 10, 3600_000)) return [429, { erro: 'Denúncias demais. Tente mais tarde.' }];
+    const { id, motivo } = await body(req);
+    if (!/^[a-z0-9]{6}$/.test(id || '')) return [400, { erro: 'Pacote inválido.' }];
+    const r = await G.denunciar(id, ip(req), motivo);
+    if (!r.ja && G.DONO) procs.get(G.DONO)?.child.send({ type: 'avisar-dono', text: `🚩 *Denúncia na galeria*\n\n📦 ${r.nome} (\`${id}\`)\n📝 ${String(motivo || 'sem motivo').slice(0, 200)}\n👥 ${r.total} denúncia(s)${r.oculto ? '\n\n🙈 Escondido da galeria até você decidir.' : ''}\n\n🗑️ */apagarpacote ${id}*${r.oculto ? `\n👁️ */mostrarpacote ${id}*` : ''}\n🔗 https://nickguigui.github.io/gumball-bot/#figurinhas/${id}` });
+    return [200, { ok: true, oculto: !!r.oculto }];
   },
   'POST /api/sair': async (req) => {
     const t = (req.headers.authorization || '').replace(/^Bearer\s+/, ''); delete reg.sessions[crypto.createHash('sha256').update(t).digest('hex')]; saveReg();
