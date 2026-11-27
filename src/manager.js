@@ -170,10 +170,15 @@ async function iaCanal(b) {
   const tons = lista(b.tons, 10), slots = lista(b.slots, 30, 20), ligas = lista(b.ligas, 20, 20);
   const sistema = `Você configura um bot que posta sozinho num canal ou grupo de WhatsApp. Responda SÓ com um JSON, sem texto fora dele, com as chaves:
 "topic" (assunto principal para pesquisar na Wikipédia, curto, ex.: "Clube de Regatas do Flamengo"), "name" (nome criativo do canal/grupo, até 40 letras), "emoji" (1 emoji), "signature" (assinatura curta ou ""), "artist" (artista/banda para a música do dia, ou "" se não fizer sentido), "tone" (exatamente um destes: ${tons.join(' | ')}), "liga" (uma destas chaves se for sobre futebol, senão "": ${ligas.join(', ')}), "destino" ("grupo" se a pessoa falou grupo, senão "canal"), "desligar" (lista de posts que NÃO combinam com o pedido, dentre: ${slots.join(', ')}), "descricao" (descrição do canal, 1 a 2 frases com emoji), "foto" (descrição em inglês de uma imagem quadrada para a foto do canal, sem texto escrito, sem logos nem marcas registradas).`;
-  for (let i = 0; i < 2; i++) {
-    const r = await fetch('https://text.pollinations.ai/openai', { method: 'POST', signal: AbortSignal.timeout(60_000), headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'openai', messages: [{ role: 'system', content: sistema }, { role: 'user', content: pedido }] }) }).catch(() => null);
-    if (!r?.ok) continue;
-    const t = (await r.json().catch(() => ({}))).choices?.[0]?.message?.content || ''; const m = t.match(/\{[\s\S]*\}/);
+  // mesma ordem do /gpt: provedor com chave (se o servidor tiver) e depois a IA gratis
+  const tries = [];
+  if (process.env.OPENAI_API_KEY) tries.push({ url: `${process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'}/chat/completions`, model: process.env.OPENAI_MODEL || 'gpt-4o-mini', auth: process.env.OPENAI_API_KEY });
+  tries.push({ url: 'https://text.pollinations.ai/openai', model: 'openai' }, { url: 'https://text.pollinations.ai/openai', model: 'openai-fast' });
+  let ultimo = '';
+  for (const t of tries) {
+    const r = await fetch(t.url, { method: 'POST', signal: AbortSignal.timeout(60_000), headers: { 'Content-Type': 'application/json', ...(t.auth ? { Authorization: `Bearer ${t.auth}` } : {}) }, body: JSON.stringify({ model: t.model, messages: [{ role: 'system', content: sistema }, { role: 'user', content: pedido }] }) }).catch(e => ({ ok: false, status: e.name }));
+    if (!r.ok) { ultimo = `${r.status} ${r.text ? (await r.text().catch(() => '')).slice(0, 120) : ''}`; console.error('[ia canal]', new URL(t.url).host, ultimo); continue; }
+    const tx = (await r.json().catch(() => ({}))).choices?.[0]?.message?.content || ''; const m = tx.match(/\{[\s\S]*\}/);
     try { if (m) return JSON.parse(m[0]); } catch {}
   }
   throw new Error('A IA grátis está ocupada agora. Tente de novo em instantes.');
@@ -334,8 +339,8 @@ const routes = {
   'POST /api/promos/oferta': async (req) => { const b = await body(req, 1_500_000); /* pode vir com foto */ return promoAsk(req, { type: 'promos-oferta', url: b.url, extra: b.extra, agora: !!b.agora }, 60_000); },
   'POST /api/promos/limpar': async (req) => promoAsk(req, { type: 'promos-limpar' }),
   // IA gratis para configurar o canal e gerar a foto (sem precisar estar conectado)
-  'POST /api/ia/canal': async (req) => { if (!iaLimite(req)) return [429, { erro: 'Muitos pedidos. Espere uns minutos.' }]; try { return [200, await iaCanal(await body(req, 8000))]; } catch (e) { return [502, { erro: e.message }]; } },
-  'POST /api/ia/foto': async (req) => { if (!iaLimite(req, 20)) return [429, { erro: 'Muitos pedidos. Espere uns minutos.' }]; try { return [200, await iaFoto(await body(req, 4000))]; } catch (e) { return [502, { erro: e.message }]; } },
+  'POST /api/ia/canal': async (req) => { if (!iaLimite(req)) return [429, { erro: 'Muitos pedidos. Espere uns minutos.' }]; try { return [200, await iaCanal(await body(req, 8000))]; } catch (e) { return [503, { erro: e.message }]; } },
+  'POST /api/ia/foto': async (req) => { if (!iaLimite(req, 20)) return [429, { erro: 'Muitos pedidos. Espere uns minutos.' }]; try { return [200, await iaFoto(await body(req, 4000))]; } catch (e) { return [503, { erro: e.message }]; } },
   // canal/grupo automatico: escrever post (agora ou agendado) e ver/cancelar a agenda
   'POST /api/canais/post': async (req) => { const b = await body(req, 1_500_000); /* pode vir com foto */ return promoAsk(req, { type: 'canal-post', idCanal: b.id, texto: b.texto, fotoB64: b.fotoB64, em: +b.em || 0 }, 60_000); },
   'POST /api/canais/agenda': async (req) => { const b = await body(req); return promoAsk(req, { type: 'canal-agenda', idCanal: b.id }); },
