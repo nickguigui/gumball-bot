@@ -112,8 +112,11 @@ export function resumo(p = loadPromos()) {
 export async function criarCanal(sock, { nome, descricao, foto, usarNoRobo = true } = {}) {
   nome = String(nome || '').trim().slice(0, 100); descricao = String(descricao || '').trim().slice(0, 2048);
   if (nome.length < 2) throw new Error('Dê um nome ao canal.');
+  // Criar canal exige os Termos de Canais do WhatsApp aceitos no numero (o app pede isso na 1a vez).
+  // A pessoa aceita ao tocar em "Criar canal" (o site avisa); e o mesmo aviso que o Baileys antigo mandava.
+  const aceitarTermos = () => sock.query({ tag: 'iq', attrs: { to: 's.whatsapp.net', xmlns: 'tos', id: sock.generateMessageTag(), type: 'set' }, content: [{ tag: 'notice', attrs: { id: '20601218', stage: '5' }, content: [] }] }).catch(e => console.error('[canal] termos:', e.message));
   let c;
-  try { c = await sock.newsletterCreate(nome, descricao || null); }
+  try { c = await sock.newsletterCreate(nome, descricao || null).catch(async e => { if (!/null|unexpected response/i.test(e.message)) throw e; await aceitarTermos(); return sock.newsletterCreate(nome, descricao || null); }); }
   catch (e) { throw new Error(/terms|tos|not.?allowed|forbidden|403|401/i.test(e.message) ? 'O WhatsApp ainda não liberou criar canais neste número. Abra o WhatsApp no celular › Atualizações › + › Criar canal, aceite os termos uma vez e tente de novo.' : `O WhatsApp não criou o canal: ${e.message}`); }
   if (foto?.length) await sock.newsletterUpdatePicture(c.id, foto).catch(e => console.error('[canal] foto:', e.message));
   const invite = `https://whatsapp.com/channel/${c.invite}`;

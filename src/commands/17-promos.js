@@ -118,7 +118,7 @@ export const commands = [
     // cria o canal (nome | descricao; foto = legenda de uma foto) e ja liga no robo de promocoes
     name: 'criarcanal', aliases: ['novocanal'], category: C, react: '📢', run: async ctx => {
       const [nome, ...desc] = ctx.q.split('|');
-      if (!nome?.trim()) return ctx.reply('📢 *Uso:* /criarcanal Nome do canal | Descrição do canal\n📷 Mande como *legenda de uma foto* para ela virar a foto do canal.\n\nO canal já entra no robô de promoções. Também dá pelo site: ' + SITE);
+      if (!nome?.trim()) return ctx.reply('📢 *Uso:* /criarcanal Nome do canal | Descrição do canal\n📷 Mande como *legenda de uma foto* para ela virar a foto do canal.\n\nO canal já entra no robô de promoções. Ao criar, você aceita os termos de Canais do WhatsApp (whatsapp.com/legal/channels-guidelines). Também dá pelo site: ' + SITE);
       const foto = await ctx.media(['imageMessage']).catch(() => null);
       const r = await criarCanal(ctx.sock, { nome, descricao: desc.join('|'), foto: foto?.buffer });
       return ctx.reply(`📢 *Canal criado!*\n\n*${r.nome}*\n🔗 ${r.invite}\n\n✅ Já está no robô de promoções. Ligue com */promocoes ligar* (ou no site).\n💡 Compartilhe o link para as pessoas seguirem.`);
