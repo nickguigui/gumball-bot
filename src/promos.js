@@ -38,7 +38,7 @@ async function jidDoCanal(sock, d) {
 export async function postarOferta(sock, o, p = loadPromos()) {
   if (!p.destinos.length) throw new Error('Escolha pelo menos um grupo ou canal para as promoções.');
   const texto = legenda(o, p);
-  const img = o.imagem ? await getBuffer(o.imagem, { timeout: 15000 }).catch(() => null) : null;
+  const img = o.imagemB64 ? Buffer.from(o.imagemB64, 'base64') : o.imagem ? await getBuffer(o.imagem, { timeout: 15000 }).catch(() => null) : null;
   const content = img ? { image: img, caption: texto } : { text: texto };
   let ok = 0, mudou = false;
   for (const d of p.destinos) {
@@ -56,7 +56,7 @@ export async function postarOferta(sock, o, p = loadPromos()) {
 export async function ofertaDoLink(url, extra = {}, p = loadPromos()) {
   const { loja, link } = await converter(url, p.afiliados);
   const pv = extra.titulo && extra.imagem ? {} : await previa(url);
-  return { id: `manual:${link}`, loja: LOJAS[loja], titulo: extra.titulo || pv.titulo || 'Oferta imperdível', preco: extra.preco ?? pv.preco ?? null, precoAntigo: extra.precoAntigo ?? null, desconto: extra.precoAntigo && extra.preco ? Math.round((1 - extra.preco / extra.precoAntigo) * 100) : 0, imagem: extra.imagem || pv.imagem || null, link, cupom: extra.cupom || null };
+  return { id: `manual:${link}`, loja: LOJAS[loja], titulo: extra.titulo || pv.titulo || 'Oferta imperdível', preco: extra.preco ?? pv.preco ?? null, precoAntigo: extra.precoAntigo ?? null, desconto: extra.precoAntigo && extra.preco ? Math.round((1 - extra.preco / extra.precoAntigo) * 100) : 0, imagem: extra.imagem || pv.imagem || null, imagemB64: typeof extra.imagemB64 === 'string' && extra.imagemB64.length < 1_400_000 ? extra.imagemB64 : undefined, link, cupom: extra.cupom || null };
 }
 export const fila = () => db.get('promo:fila', []);
 export const setFila = f => db.set('promo:fila', f.slice(0, 200));

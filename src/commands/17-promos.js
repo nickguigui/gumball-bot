@@ -65,9 +65,12 @@ export const commands = [
   {
     name: 'promo', aliases: ['oferta', 'addpromo'], category: C, react: '🛒', run: async ctx => {
       const url = linkDe(ctx.q) || linkDe(ctx.quoted?.text);
-      if (!url) return ctx.reply('🛒 *Uso:* /promo <link> [preço] [de preço antigo] [cupom X] [| título]\nEx.: */promo https://amzn.to/xyz 129,90 de 199,90 cupom DESC10*\n\nEntra na fila do robô. Para postar já: */promo agora <link>...*');
+      if (!url) return ctx.reply('🛒 *Uso:* /promo <link> [preço] [de preço antigo] [cupom X] [| título]\nEx.: */promo https://amzn.to/xyz 129,90 de 199,90 cupom DESC10*\n📷 Mande como *legenda de uma foto* para a foto ir junto no post.\n\nEntra na fila do robô. Para postar já: */promo agora <link>...*');
       const p = loadPromos(); const agora = /^agora\b/i.test(ctx.q.trim());
       let o; try { o = await ofertaDoLink(url, lerExtras(ctx.q.replace(/^agora\s+/i, '')), p); } catch (e) { return ctx.reply(`🛒 ${e.message}\n\n📖 */comoafiliar*`); }
+      // foto mandada junto (legenda /promo ...) ou respondida: vai no post (a Amazon nao deixa pegar a foto pela pagina)
+      const foto = await ctx.media(['imageMessage']).catch(() => null);
+      if (foto?.buffer && foto.buffer.length < 900_000) o.imagemB64 = foto.buffer.toString('base64');
       if (agora) { const n = await postarOferta(ctx.sock, o, p); return ctx.reply(`🛒 Postada em ${n} destino(s)!`); }
       const f = fila(); f.push(o); setFila(f);
       return ctx.reply(`🛒 *Na fila (${f.length}º)!* Assim vai ficar:\n\n${legenda(o, p)}\n\n${p.ativo ? `⏰ Sai em até ${p.intervalo} min (entre ${p.de} e ${p.ate}).` : '⚠️ O robô está desligado: */promocoes ligar*'}`);

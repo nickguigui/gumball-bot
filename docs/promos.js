@@ -69,14 +69,24 @@ const num = v => { const s = String(v || '').replace(/[^\d,.]/g, ''); if (!s) re
 const msg = (t, ok) => { const m = $('#pr-oferta-msg'); m.innerHTML = t; m.hidden = !t; m.style.background = ok === false ? 'var(--error-container)' : ''; m.style.color = ok === false ? 'var(--on-error-container)' : ''; };
 $('#pr-oferta').addEventListener('submit', async e => {
   e.preventDefault(); const f = e.target; const agora = e.submitter?.name === 'agora';
-  const extra = { preco: num(f.preco.value), precoAntigo: num(f.precoAntigo.value), cupom: f.cupom.value.trim() || undefined, titulo: f.titulo.value.trim() || undefined };
+  const extra = { preco: num(f.preco.value), precoAntigo: num(f.precoAntigo.value), cupom: f.cupom.value.trim() || undefined, titulo: f.titulo.value.trim() || undefined, imagemB64: f.foto.files[0] ? await fotoB64(f.foto.files[0]) : undefined };
   msg(agora ? 'Postando…' : 'Colocando na fila…');
   try {
     const r = await api('/api/promos/oferta', { method: 'POST', body: { url: f.url.value.trim(), extra, agora } });
     msg(agora ? `✓ Postada em ${r.postada} destino(s): <b>${esc(r.oferta.titulo)}</b>` : `✓ Na fila (${r.naFila}º): <b>${esc(r.oferta.titulo)}</b>${r.oferta.preco ? ` · R$ ${esc(r.oferta.preco.toFixed(2).replace('.', ','))}` : ''}`);
-    f.reset();
+    f.reset(); $('#pr-foto-txt').textContent = 'Foto do produto (opcional)';
   } catch (err) { msg(esc(err.message), false); }
 });
+// foto reduzida no navegador (ate 900px, JPEG) para caber no envio
+function fotoB64(file) {
+  return new Promise(res => {
+    const img = new Image(); img.onload = () => {
+      const k = Math.min(1, 900 / Math.max(img.width, img.height)); const c = Object.assign(document.createElement('canvas'), { width: Math.round(img.width * k), height: Math.round(img.height * k) });
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.85).split(',')[1]); URL.revokeObjectURL(img.src);
+    }; img.onerror = () => res(undefined); img.src = URL.createObjectURL(file);
+  });
+}
+document.querySelector('#pr-oferta').foto.addEventListener('change', e => { document.querySelector('#pr-foto-txt').textContent = e.target.files[0] ? `📷 ${e.target.files[0].name}` : 'Foto do produto (opcional)'; });
 $('#pr-converter').addEventListener('click', async () => {
   const url = $('#pr-oferta').url.value.trim(); if (!url) return msg('Cole o link de um produto.', false);
   try { const r = await api('/api/promos/link', { method: 'POST', body: { url } }); msg(`Seu link de afiliado: <a href="${esc(r.link)}" target="_blank" rel="noopener">${esc(r.link)}</a> <button type="button" class="btn text small" id="pr-copiar"><span class="ms">content_copy</span>Copiar</button>`); $('#pr-copiar').onclick = () => navigator.clipboard?.writeText(r.link); }

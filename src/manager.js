@@ -125,8 +125,8 @@ function send(res, status, body, origin) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...(origin ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : {}), 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(body));
 }
-async function body(req) {
-  let s = ''; for await (const c of req) { s += c; if (s.length > 20000) throw new Error('grande demais'); }
+async function body(req, max = 20000) {
+  let s = ''; for await (const c of req) { s += c; if (s.length > max) throw new Error('grande demais'); }
   try { return JSON.parse(s || '{}'); } catch { return {}; }
 }
 function auth(req) {
@@ -301,7 +301,7 @@ const routes = {
   'POST /api/promos': async (req) => promoAsk(req, { type: 'promos-set', dados: await body(req) }),
   'POST /api/promos/link': async (req) => promoAsk(req, { type: 'promos-link', url: (await body(req)).url }),
   'POST /api/promos/testar': async (req) => promoAsk(req, { type: 'promos-testar' }, 60_000),
-  'POST /api/promos/oferta': async (req) => { const b = await body(req); return promoAsk(req, { type: 'promos-oferta', url: b.url, extra: b.extra, agora: !!b.agora }, 60_000); },
+  'POST /api/promos/oferta': async (req) => { const b = await body(req, 1_500_000); /* pode vir com foto */ return promoAsk(req, { type: 'promos-oferta', url: b.url, extra: b.extra, agora: !!b.agora }, 60_000); },
   'POST /api/promos/limpar': async (req) => promoAsk(req, { type: 'promos-limpar' }),
   // Galeria: denuncia de um pacote (3 pessoas diferentes escondem ate o dono da plataforma olhar)
   'POST /api/galeria/denunciar': async (req) => {
