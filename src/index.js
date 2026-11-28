@@ -231,7 +231,7 @@ if (MANAGED) {
             const lista = String(msg.codigos || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const [codigo, ...d] = l.split(/\s+/); return { codigo: codigo.toUpperCase(), titulo: '', desc: d.join(' ').replace(/^[-–:]\s*/, '') }; }).filter(c => /^[A-Z0-9_-]{3,30}$/.test(c.codigo));
             if (!lista.length) throw new Error('Escreva pelo menos um código (um por linha: CODIGO descrição).');
             if (!['mercadolivre', 'amazon', 'shopee', 'aliexpress'].includes(msg.loja)) throw new Error('Escolha a loja.');
-            return { postado: await P.postarCupons(current, msg.loja, lista, { link: msg.link || undefined }), resumo: P.resumo() };
+            return { postado: await P.postarCupons(current, msg.loja, lista, { link: msg.link || undefined, manual: true }), resumo: P.resumo() };
           }
           if (msg.type === 'promos-esgotou') return { postado: await P.postarEsgotados(current, [String(msg.codigo || '').toUpperCase()]), resumo: P.resumo() };
           if (msg.type === 'promos-criarcanal') return P.criarCanal(current, { nome: msg.nome, descricao: msg.descricao, foto: msg.fotoB64 ? Buffer.from(String(msg.fotoB64), 'base64') : null, usarNoRobo: msg.usarNoRobo !== false });

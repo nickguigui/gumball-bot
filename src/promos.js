@@ -69,7 +69,7 @@ export function legenda(o, p = loadPromos()) {
     `*${o.gancho || caps(String(o.titulo).slice(0, 70))}*`, '',
     `✅ ${o.titulo}`, '',
     antigo ? `DE ~${brl(antigo)}~` : null,
-    o.preco ? `🔥POR ${brl(o.preco)} 🔥${d ? ` ${d}% OFF` : ''}${o.cupom ? ' (com cupom)' : ''}${o.obs ? ` ${o.obs}` : ''}` : null,
+    o.preco ? (antigo || d ? `🔥POR ${brl(o.preco)} 🔥${d ? ` ${d}% OFF` : ''}${o.cupom ? ' (com cupom)' : ''}${o.obs ? ` ${o.obs}` : ''}` : `💰 ${brl(o.preco)}${o.cupom ? ' (com cupom)' : ''}${o.obs ? ` ${o.obs}` : ''}`) : null,
     o.cupom ? `\n🎟️Cupom: ${o.cupom}` : null, '',
     `🔗 ${o.link}`,
     o.lojaOficial ? `_Selecione a loja oficial ${o.lojaOficial}_` : null,
@@ -133,13 +133,13 @@ export async function lojaLink(loja, p = loadPromos()) {
   } catch {}
   return { amazon: 'https://www.amazon.com.br/', mercadolivre: 'https://www.mercadolivre.com.br/', shopee: 'https://shopee.com.br/', aliexpress: 'https://pt.aliexpress.com/' }[loja];
 }
-export async function postarCupons(sock, loja, lista, { link } = {}, p = loadPromos()) {
+export async function postarCupons(sock, loja, lista, { link, manual = false } = {}, p = loadPromos()) {
   const url = link ? (await converter(link, codigosParaPost(p)).then(r => r.link).catch(() => link)) : await lojaLink(loja, p);
   const texto = legendaCupons(loja, lista, url, p);
   const banner = path.join(ASSETS, `${loja}.jpg`);
   const n = await postarConteudo(sock, fs.existsSync(banner) ? { image: fs.readFileSync(banner), caption: texto } : { text: texto }, p);
   const ativos = db.get('promo:cuponsAtivos', {});
-  for (const c of lista) ativos[c.codigo] = { loja, em: Date.now() };
+  for (const c of lista) ativos[c.codigo] = { loja, em: Date.now(), manual, faltas: 0, id: c.id || null };
   db.set('promo:cuponsAtivos', ativos);
   return n;
 }
@@ -182,32 +182,43 @@ async function proximaAutomatica(p) {
   db.set('promo:giro', giro); return null;
 }
 
-// Cupons automaticos: novos viram post (com a imagem da loja); os ja postados que sumirem 2 vezes seguidas = esgotado
+// Cupons: checa a cada 10 min. Novo cupom vira post (com a imagem da loja).
+// "ESGOTADO" so sai com confirmacao: a Cuponomia moveu o codigo para os expirados, ou ele sumiu
+// da lista de validos em 3 checagens seguidas (30 min). Vale tambem para cupons postados a mao (/cupom).
 async function tickCupons(sock, p) {
-  if (!p.cupons?.auto || !p.cupons.lojas?.length) return;
-  if (Date.now() - db.get('promo:cuponsUltimo', 0) < 30 * 60_000) return;
+  const ativos = db.get('promo:cuponsAtivos', {});
+  const auto = p.cupons?.auto && p.cupons.lojas?.length;
+  const lojas = new Set([...(auto ? p.cupons.lojas : []), ...Object.values(ativos).map(a => a.loja)].filter(l => SLUG_OK.includes(l)));
+  if (!lojas.size) return;
+  if (Date.now() - db.get('promo:cuponsUltimo', 0) < 10 * 60_000) return;
   db.set('promo:cuponsUltimo', Date.now());
-  for (const loja of p.cupons.lojas) {
+  for (const loja of lojas) {
     const lista = await cuponsDaLoja(loja).catch(e => { db.set('promo:erro', { em: Date.now(), fonte: 'cupons ' + loja, msg: e.message }); return null; });
-    if (!lista) continue;
-    const k = 'promo:cupons:' + loja; const vistos = db.get(k, null); const atual = new Set(lista.map(c => c.codigo));
-    if (!vistos) { // primeira vez: posta so os 3 primeiros (nao inunda o grupo com dezenas de cupons)
-      const novos = lista.slice(0, 3); if (novos.length) await postarCupons(sock, loja, novos, {}, p);
-      db.set(k, Object.fromEntries(lista.map(c => [c.codigo, { faltas: 0, postado: novos.some(n => n.codigo === c.codigo) }]))); continue;
+    if (!lista || (!lista.length && !lista.expirados?.size)) continue; // pagina falhou ou mudou: nao conclui nada
+    const validos = new Set(lista.map(c => c.codigo)); const expirados = lista.expirados || new Set();
+    const k = 'promo:cupons:' + loja; let vistos = db.get(k, null);
+    if (auto && p.cupons.lojas.includes(loja)) {
+      const primeira = !vistos; vistos ||= {};
+      const novos = lista.filter(c => !vistos[c.codigo]).slice(0, primeira ? 3 : 6); // 1a vez: so 3, nao inunda o grupo
+      if (novos.length) await postarCupons(sock, loja, novos, {}, p);
+      for (const c of lista) vistos[c.codigo] = { faltas: 0 };
     }
-    const novos = lista.filter(c => !vistos[c.codigo]).slice(0, 6);
-    if (novos.length) await postarCupons(sock, loja, novos, {}, p);
-    for (const c of lista) vistos[c.codigo] = { faltas: 0, postado: vistos[c.codigo]?.postado || novos.some(n => n.codigo === c.codigo) };
-    const esgotados = [];
-    for (const [cod, v] of Object.entries(vistos)) {
-      if (atual.has(cod)) continue;
-      v.faltas = (v.faltas || 0) + 1;
-      if (v.faltas >= 2) { if (v.postado) esgotados.push(cod); delete vistos[cod]; }
+    // cupons que eu postei (automaticos ou manuais) desta loja: confirmar se esgotaram
+    const esgotados = []; const idDe = Object.fromEntries(lista.filter(c => c.id).map(c => [c.codigo, c.id]));
+    const at = db.get('promo:cuponsAtivos', {});
+    for (const [cod, a] of Object.entries(at)) {
+      if (a.loja !== loja) continue;
+      a.id ||= idDe[cod]; // guarda o numero do cupom enquanto ele esta valido
+      if (a.id && expirados.has(a.id)) { esgotados.push(cod); continue; }
+      if (validos.has(cod)) { a.faltas = 0; continue; }
+      if (!a.manual) { a.faltas = (a.faltas || 0) + 1; if (a.faltas >= 3) esgotados.push(cod); }
     }
+    db.set('promo:cuponsAtivos', at);
     if (esgotados.length) await postarEsgotados(sock, esgotados.slice(0, 10), p);
-    db.set(k, vistos);
+    if (vistos) { for (const cod of Object.keys(vistos)) if (!validos.has(cod)) delete vistos[cod]; db.set(k, vistos); }
   }
 }
+const SLUG_OK = ['mercadolivre', 'amazon', 'shopee', 'aliexpress'];
 
 let ocupado = false;
 export async function tickPromos(sock) {

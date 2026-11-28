@@ -153,7 +153,7 @@ export const commands = [
       if (!lista.length) return ctx.reply('🎟️ Escreva o código do cupom. Ex.: */cupom ml MELIAGORA 10% OFF acima de R$199*');
       const p = loadPromos();
       if (!p.destinos.length) return ctx.reply(`🎟️ Assim vai ficar (escolha onde postar com */promocoes aqui*):\n\n${legendaCupons(loja, lista, link || await lojaLink(loja, p), p)}`);
-      const n = await postarCupons(ctx.sock, loja, lista, { link }, p);
+      const n = await postarCupons(ctx.sock, loja, lista, { link, manual: true }, p);
       return ctx.reply(`🎟️ Cupom postado em ${n} destino(s)! Quando acabar: */esgotou ${lista[0].codigo}*`);
     },
   },

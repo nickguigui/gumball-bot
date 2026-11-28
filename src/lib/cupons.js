@@ -22,7 +22,10 @@ export async function cuponsDaLoja(loja) {
     // a condicao (ex.: "Em compras acima de R$599, com desconto máximo limitado a R$200.")
     const partes = bruto.split(/\s{2,}|\n/).map(limpa).filter(Boolean);
     const cond = [...partes].reverse().find(s => /compra|acima|a partir|primeira|selecionad|todo o site|limite/i.test(s) && !/cashback|usados|Verificado|Ver Cupom|Cadastre|extensão/i.test(s)) || '';
-    out.push({ codigo, titulo, desc: cond.replace(/\s*\+?\s*[\d,.]+%\s*de cashback/gi, '').slice(0, 160), loja });
+    out.push({ codigo, titulo, desc: cond.replace(/\s*\+?\s*[\d,.]+%\s*de cashback/gi, '').slice(0, 160), loja, id: li.attr('data-id') || null });
   });
+  // codigos que a propria Cuponomia ja marcou como expirados (confirmacao de "esgotou")
+  // (la o codigo fica escondido; o numero do cupom na Cuponomia, data-id, e o mesmo de quando era valido)
+  out.expirados = new Set($('ul.expired-coupons > li').map((_, el) => $(el).attr('data-id')).get().filter(Boolean));
   return out;
 }
