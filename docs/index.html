@@ -149,8 +149,27 @@
   <ul id="canal-progress" class="progress" hidden></ul>
 
   <div id="canal-result" hidden>
-    <h3 style="font-size:22px;margin-top:24px">Grade do dia: <span id="r-topic"></span></h3>
-    <p class="muted">Mude horários, desligue o que não quiser e confira cada prévia. No canal, os posts são criados na hora, sempre novos e com IA.</p>
+    <h3 style="font-size:22px;margin-top:24px"><span id="r-titulo">Grade do dia</span>: <span id="r-topic"></span></h3>
+    <p class="muted" id="r-sub">Mude horários, desligue o que não quiser e confira cada prévia. No canal, os posts são criados na hora, sempre novos e com IA.</p>
+    <form id="promo-opcoes" class="form" hidden>
+      <div class="seg estilos">
+        <label><input type="radio" name="estilo" value="profissional" checked><span><b>Profissional</b><small>Título chamativo, preço, cupom quando tiver, link e "anúncio"</small></span></label>
+        <label><input type="radio" name="estilo" value="fofo"><span><b>Fofo</b><small>"achadinho do dia", emoticons e carinho 💕</small></span></label>
+      </div>
+      <p class="muted small" style="margin:12px 0 6px">Cupons de quais lojas?</p>
+      <div class="chips" id="po-lojas">
+        <label><input type="checkbox" value="mercadolivre">Mercado Livre</label><label><input type="checkbox" value="amazon">Amazon</label><label><input type="checkbox" value="shopee">Shopee</label><label><input type="checkbox" value="aliexpress">AliExpress</label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <label class="field"><input name="buscas" placeholder=" "><span>Produtos do nicho (ex.: fone, smartwatch). Vazio = de tudo</span></label>
+        <label class="field"><input name="intervalo" type="number" min="15" max="180" value="30"><span>Minutos entre ofertas</span></label>
+      </div>
+      <div class="row">
+        <label class="field"><input name="de" type="time" value="08:00"><span>Começa</span></label>
+        <label class="field"><input name="ate" type="time" value="22:00"><span>Termina</span></label>
+        <label class="field"><input name="descontoMin" type="number" min="0" max="90" value="15"><span>Desconto mínimo (%)</span></label>
+      </div>
+    </form>
     <ul class="grade" id="grade-body"></ul>
 
     <div class="approve">

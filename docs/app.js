@@ -3,7 +3,7 @@
 // no canal de verdade o bot usa IA no servidor para escrever cada post.
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const wa = s => esc(s).replace(/\*([^*\n]+)\*/g, '<b>$1</b>').replace(/_([^_\n]+)_/g, '<i>$1</i>').replace(/^&gt; (.*)$/gm, '<span style="border-left:3px solid #8886;padding-left:8px;display:block">$1</span>');
+const wa = s => esc(s).replace(/~([^~\n]+)~/g, '<s>$1</s>').replace(/\*([^*\n]+)\*/g, '<b>$1</b>').replace(/_([^_\n]+)_/g, '<i>$1</i>').replace(/^&gt; (.*)$/gm, '<span style="border-left:3px solid #8886;padding-left:8px;display:block">$1</span>');
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 const REPO = 'nickguigui/gumball-bot';
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -388,7 +388,8 @@ const BUILD = {
 
 $('#canal-form').addEventListener('submit', async e => {
   e.preventDefault();
-  Object.assign(ctx, Object.fromEntries(new FormData(e.target)), { imgs: [], quiz: null }); ctx.name ||= ctx.topic;
+  Object.assign(ctx, Object.fromEntries(new FormData(e.target)), { imgs: [], quiz: null, modo: 'canal' }); ctx.name ||= ctx.topic;
+  $('#promo-opcoes').hidden = true; $('#r-titulo').textContent = 'Grade do dia'; $('#r-sub').textContent = 'Mude horários, desligue o que não quiser e confira cada prévia. No canal, os posts são criados na hora, sempre novos e com IA.';
   const btn = e.target.querySelector('button'); btn.disabled = true;
   $('#canal-progress').hidden = false; $('#canal-progress').innerHTML = ''; $('#canal-result').hidden = true;
   let s = step(`Pesquisando "${ctx.topic}" na Wikipédia`);
@@ -429,6 +430,11 @@ $('#btn-github').addEventListener('click', async () => {
   const btn = $('#btn-github');
   if (!session) { alert('Entre no painel primeiro (aba Conectar / Painel). Depois volte aqui e toque de novo.'); return; }
   btn.disabled = true;
+  if (ctx.modo === 'promo') {
+    try { const r = await ativarPromo(); btn.lastChild.textContent = `Ligado! ${r.destinos.length} destino(s). O primeiro post sai em até 10 minutos`; openPanel().catch(() => {}); }
+    catch (err) { btn.disabled = false; alert(err.message); }
+    return;
+  }
   try { await api('/api/canais', { method: 'POST', body: { canal: buildConfig() } }); btn.lastChild.textContent = 'Ativado! Começa em até 10 minutos'; openPanel().catch(() => {}); }
   catch (err) { btn.disabled = false; alert(err.message); }
 });
@@ -467,7 +473,8 @@ $('#btn-ia').addEventListener('click', async () => {
     $('#ch-cnome').value = f.name.value; $('#ch-cdesc').value = ctx.iaDescricao;
     msg.textContent = `✓ Pronto: "${f.name.value || f.topic.value}"${f.liga.value ? ` com jogos e tabela do ${LIGAS[f.liga.value][1]}` : ''}, postando ${ctx.iaDestino === 'grupo' ? 'num grupo' : 'num canal'}. Montando a grade...`;
     if (ctx.iaDestino === 'canal') gerarFoto();
-    f.requestSubmit();
+    if (c.tipo === 'promocoes') { msg.textContent = `✓ Pronto: "${f.name.value}", um ${ctx.iaDestino === 'grupo' ? 'grupo' : 'canal'} de promoções. Confira a grade abaixo e escolha onde postar.`; montarPromo(c.promo || {}); }
+    else f.requestSubmit();
   } catch (err) { msg.textContent = `Não deu: ${err.message.replace(/\.$/, '')}.`; }
   btn.disabled = false;
 });
@@ -498,6 +505,67 @@ $('#btn-criar').addEventListener('click', async () => {
     $('#ch-invite').value = r.invite; m.textContent = `✓ Canal "${r.nome}" criado! O link já está no campo acima. Agora toque em Aprovar.`;
   } catch (err) { m.textContent = err.message; btn.disabled = false; }
 });
+
+// ---------- robo de promocoes montado pela IA ----------
+const LOJA_NOME = { mercadolivre: 'Mercado Livre', amazon: 'Amazon', shopee: 'Shopee', aliexpress: 'AliExpress' };
+const LOJA_IMG = l => `https://raw.githubusercontent.com/nickguigui/gumball-bot/main/assets/lojas/${l}.jpg`;
+const PROMO_POSTS = [
+  ['ofertas', '🔥 Ofertas', 'No intervalo escolhido. Preço DE/POR só quando tem desconto; cupom só quando tem'],
+  ['cupons', '🎟️ Cupons novos', 'Com a imagem da loja, quando aparece cupom público novo'],
+  ['esgotado', '❌ Cupom esgotado', 'Confere a cada 10 min e só avisa quando confirma que acabou'],
+  ['datas', '📅 Contagem das datas', 'Black Friday, 11.11, Natal... (só perto das datas)'],
+];
+function promoEstilo() { return document.querySelector('#promo-opcoes [name=estilo]:checked')?.value || 'profissional'; }
+function promoLojas() { return $$('#po-lojas input:checked').map(i => i.value); }
+function previaPromo(k) {
+  const fofo = promoEstilo() === 'fofo'; const lj = promoLojas()[0] || 'mercadolivre';
+  const data = '> 🚨 _Faltam poucos dias para a próxima data especial! Ativa as notificações e fica ligado!_';
+  if (k === 'ofertas') return bubble(wa(fofo
+    ? `🛍️✨ *achadinho do dia!* ✨🛍️\n\n💖 Fone Bluetooth com cancelamento de ruído\n\nde ~R$ 299,90~ por *R$ 149,90* (-50%) 🥳\n🎟️ cupom: *EXEMPLO10*\n👉 link de afiliado\n\n_link de afiliado 💕_`
+    : `*FONE BLUETOOTH: SILÊNCIO NO BUSÃO*\n\n✅ Fone Bluetooth com cancelamento de ruído\n\nDE ~R$ 299,90~\n🔥POR R$ 149,90 🔥 50% OFF (com cupom)\n\n🎟️Cupom: EXEMPLO10\n\n🔗 link de afiliado\n\n*anúncio*`)
+    + wa('\n\n_Sem desconto e sem cupom, o post mostra só o preço (💰 R$ 149,90)._'));
+  if (k === 'cupons') return bubble(`<img src="${LOJA_IMG(lj)}" alt="" style="width:100%;border-radius:6px;margin-bottom:6px">` + wa(fofo
+    ? `🎀 *cupom novinho ${LOJA_NOME[lj]}!* 🎀\n\n🎟️ *CODIGO* · _10% OFF acima de R$ 199_\n\n👉 link da loja\n_resgata o cupom e usa na hora de pagar 💕_`
+    : `*🚨 NOVO CUPOM ${LOJA_NOME[lj].toUpperCase()}*\n\n🎟️ Cupom: " *CODIGO* "\n_10% OFF acima de R$ 199_\n\n_Acesse o link, procure os produtos desejados e ative o cupom na tela de pagamento clicando em "cupons"_\n\n🔗 link da loja\n\n*anúncio*`));
+  if (k === 'esgotado') return bubble(wa(fofo ? '🎟️ cupom *CODIGO* esgotou 😢❌' : '🎟️ Cupom: *CODIGO* ESGOTADO ❌'));
+  if (k === 'datas') return bubble(wa(`(vai no fim dos posts)\n\n${data}`));
+}
+function renderPromo() { for (const [k] of PROMO_POSTS) { const el = $('#pv-' + k); if (el) el.innerHTML = previaPromo(k); } }
+function montarPromo(pr) {
+  ctx.modo = 'promo'; const f = $('#canal-form'); ctx.name = f.name.value || 'Promoções'; ctx.topic = f.topic.value || 'promoções'; ctx.emoji = f.emoji.value || '🔥';
+  const o = $('#promo-opcoes'); o.hidden = false;
+  for (const i of o.querySelectorAll('[name=estilo]')) i.checked = i.value === (pr.estilo === 'fofo' ? 'fofo' : 'profissional');
+  const lojas = Array.isArray(pr.lojas) && pr.lojas.length ? pr.lojas : ['mercadolivre', 'amazon', 'shopee'];
+  for (const i of $$('#po-lojas input')) i.checked = lojas.includes(i.value);
+  o.buscas.value = (Array.isArray(pr.buscas) ? pr.buscas : []).slice(0, 6).join(', ');
+  if (pr.intervalo >= 15 && pr.intervalo <= 180) o.intervalo.value = Math.round(pr.intervalo);
+  if (pr.descontoMin >= 0 && pr.descontoMin <= 60) o.descontoMin.value = Math.round(pr.descontoMin);
+  $('#r-titulo').textContent = 'Robô de promoções'; $('#r-topic').textContent = ctx.name;
+  $('#r-sub').textContent = 'É isso que vai sair. Ajuste o estilo, as lojas e o nicho, desligue o que não quiser e escolha onde postar.';
+  $('#grade-body').innerHTML = PROMO_POSTS.map(([k, label, sub]) => `<li data-k="${k}"><div class="when"><small>${k === 'ofertas' ? 'no intervalo' : k === 'datas' ? 'perto das datas' : 'quando tiver'}</small></div><div class="kind"><b>${esc(label)}</b><small>${esc(sub)}</small></div><div class="preview" id="pv-${k}"></div><input type="checkbox" class="switch" aria-label="Ativar ${esc(label)}" checked></li>`).join('');
+  renderPromo(); $('#canal-progress').hidden = true; $('#canal-result').hidden = false; $('#approve-out').hidden = true;
+  setDestino(ctx.iaDestino || 'grupo');
+  if (!$('#ch-cnome').value) $('#ch-cnome').value = ctx.name;
+  if (!$('#ch-cdesc').value) $('#ch-cdesc').value = ctx.iaDescricao || `As melhores promoções e cupons, todo dia ${ctx.emoji}`;
+  $('#canal-result').scrollIntoView({ behavior: 'smooth' });
+}
+$('#promo-opcoes').addEventListener('change', renderPromo);
+async function ativarPromo() {
+  const o = $('#promo-opcoes'); const liga = k => $(`#grade-body li[data-k="${k}"] .switch`)?.checked !== false;
+  const atual = await api('/api/promos'); // nao apaga destinos que ja existiam
+  const novo = destino() === 'grupo'
+    ? { tipo: 'grupo', jid: $('#ch-grupo').value, nome: $('#ch-grupo').selectedOptions[0]?.textContent || 'Grupo' }
+    : { tipo: 'canal', invite: $('#ch-invite').value.trim(), nome: $('#ch-cnome').value.trim() || ctx.name };
+  const destinos = [...(atual.destinos || []).filter(d => (d.jid || d.invite) !== (novo.jid || novo.invite)), novo];
+  const lojas = promoLojas();
+  const { resumo } = await api('/api/promos', { method: 'POST', body: {
+    ativo: true, estilo: promoEstilo(), destinos, emoji: ctx.emoji,
+    intervalo: liga('ofertas') ? +o.intervalo.value || 30 : 1440, de: o.de.value, ate: o.ate.value, descontoMin: +o.descontoMin.value || 0,
+    buscas: o.buscas.value.split(',').map(x => x.trim()).filter(Boolean),
+    datas: liga('datas'), cupons: { auto: liga('cupons') && lojas.length > 0, lojas },
+  } });
+  return resumo;
+}
 
 // ---------- painel: escrever post (agora ou agendado) ----------
 let postId = null;
